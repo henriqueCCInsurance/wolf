@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W.O.L.F. Den - Campbell & Co.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .campbell-green { color: #a5cf4c; }
+        .campbell-bg { background-color: #a5cf4c; }
+        body { font-family: 'Lato', sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const WolfDenApp = () => {
+            const [activeModule, setActiveModule] = useState('hunt');
+            const [prospect, setProspect] = useState({
+                company: '',
+                contactName: '',
+                industry: '',
+                persona: ''
+            });
+            const [battleCard, setBattleCard] = useState(null);
+            const [callLog, setCallLog] = useState('');
+            
+            const industries = [
+                'Technology', 'Healthcare', 'Manufacturing', 'Retail', 
+                'Financial Services', 'Professional Services'
+            ];
+            
+            const personas = [
+                { id: 'cost-conscious-employer', name: 'Cost-Conscious Employer' },
+                { id: 'benefits-optimizer', name: 'Benefits Optimizer' },
+                { id: 'roi-focused-executive', name: 'ROI-Focused Executive' },
+                { id: 'gatekeeper', name: 'Gatekeeper' }
+            ];
+            
+            const generateBattleCard = () => {
+                setBattleCard({
+                    ...prospect,
+                    generatedAt: new Date().toLocaleString(),
+                    keyPoints: [
+                        'Focus on cost savings and ROI',
+                        'Highlight industry-specific benefits',
+                        'Address common objections proactively'
+                    ]
+                });
+                setActiveModule('battle');
+            };
+            
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {/* Header */}
+                    <header className="bg-white shadow-sm border-b">
+                        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="campbell-bg text-white font-bold text-xl px-3 py-1 rounded">
+                                    W.O.L.F. Den
+                                </div>
+                                <span className="text-gray-600">Campbell & Co. Sales Enablement</span>
+                            </div>
+                            <nav className="flex gap-4">
+                                <button 
+                                    onClick={() => setActiveModule('hunt')}
+                                    className={`px-4 py-2 rounded ${activeModule === 'hunt' ? 'campbell-bg text-white' : 'text-gray-600'}`}
+                                >
+                                    Hunt Planner
+                                </button>
+                                <button 
+                                    onClick={() => setActiveModule('battle')}
+                                    className={`px-4 py-2 rounded ${activeModule === 'battle' ? 'campbell-bg text-white' : 'text-gray-600'}`}
+                                >
+                                    Battle Card
+                                </button>
+                                <button 
+                                    onClick={() => setActiveModule('post')}
+                                    className={`px-4 py-2 rounded ${activeModule === 'post' ? 'campbell-bg text-white' : 'text-gray-600'}`}
+                                >
+                                    Post Game
+                                </button>
+                            </nav>
+                        </div>
+                    </header>
+                    
+                    {/* Main Content */}
+                    <main className="max-w-7xl mx-auto px-4 py-8">
+                        {/* Hunt Planner Module */}
+                        {activeModule === 'hunt' && (
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h2 className="text-2xl font-bold mb-6">Hunt Planner</h2>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Company Name</label>
+                                        <input 
+                                            type="text"
+                                            value={prospect.company}
+                                            onChange={(e) => setProspect({...prospect, company: e.target.value})}
+                                            className="w-full border rounded px-3 py-2"
+                                            placeholder="Enter company name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Contact Name</label>
+                                        <input 
+                                            type="text"
+                                            value={prospect.contactName}
+                                            onChange={(e) => setProspect({...prospect, contactName: e.target.value})}
+                                            className="w-full border rounded px-3 py-2"
+                                            placeholder="Enter contact name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Industry</label>
+                                        <select 
+                                            value={prospect.industry}
+                                            onChange={(e) => setProspect({...prospect, industry: e.target.value})}
+                                            className="w-full border rounded px-3 py-2"
+                                        >
+                                            <option value="">Select industry</option>
+                                            {industries.map(ind => (
+                                                <option key={ind} value={ind}>{ind}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">Persona Type</label>
+                                        <select 
+                                            value={prospect.persona}
+                                            onChange={(e) => setProspect({...prospect, persona: e.target.value})}
+                                            className="w-full border rounded px-3 py-2"
+                                        >
+                                            <option value="">Select persona</option>
+                                            {personas.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={generateBattleCard}
+                                    disabled={!prospect.company || !prospect.industry || !prospect.persona}
+                                    className="mt-6 campbell-bg text-white px-6 py-2 rounded disabled:opacity-50"
+                                >
+                                    Generate Battle Card
+                                </button>
+                            </div>
+                        )}
+                        
+                        {/* Battle Card Module */}
+                        {activeModule === 'battle' && battleCard && (
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h2 className="text-2xl font-bold mb-6">Battle Card</h2>
+                                <div className="border-2 border-gray-200 rounded p-6">
+                                    <div className="campbell-green text-lg font-bold mb-4">
+                                        {battleCard.company} - {battleCard.contactName}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <span className="font-medium">Industry:</span> {battleCard.industry}
+                                        </div>
+                                        <div>
+                                            <span className="font-medium">Persona:</span> {personas.find(p => p.id === battleCard.persona)?.name}
+                                        </div>
+                                    </div>
+                                    <div className="mt-6">
+                                        <h3 className="font-bold mb-2">Key Talking Points:</h3>
+                                        <ul className="list-disc pl-5">
+                                            {battleCard.keyPoints.map((point, i) => (
+                                                <li key={i}>{point}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="mt-4 text-sm text-gray-500">
+                                        Generated: {battleCard.generatedAt}
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => window.print()}
+                                    className="mt-4 campbell-bg text-white px-6 py-2 rounded"
+                                >
+                                    Print Battle Card
+                                </button>
+                            </div>
+                        )}
+                        
+                        {/* Post Game Module */}
+                        {activeModule === 'post' && (
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h2 className="text-2xl font-bold mb-6">Post Game Analysis</h2>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-2">Call Notes</label>
+                                    <textarea 
+                                        value={callLog}
+                                        onChange={(e) => setCallLog(e.target.value)}
+                                        className="w-full border rounded px-3 py-2 h-32"
+                                        placeholder="Enter your call notes here..."
+                                    />
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        alert('Call log saved!');
+                                        setCallLog('');
+                                    }}
+                                    className="campbell-bg text-white px-6 py-2 rounded"
+                                >
+                                    Save Call Log
+                                </button>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+        
+        ReactDOM.render(<WolfDenApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The W.O.L.F. Den - Test Preview</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9e8',
+                            100: '#daf0c4',
+                            200: '#c1e694',
+                            300: '#a5cf4c',
+                            400: '#8db83a',
+                            500: '#7aa030',
+                            600: '#6a8c28',
+                            700: '#5a7621',
+                            800: '#4a611b',
+                            900: '#3d4f17',
+                        }
+                    },
+                    fontFamily: {
+                        'lato': ['Lato', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Lato', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        // Simple demo version of The W.O.L.F. Den
+        const { useState } = React;
+        
+        const WolfDenDemo = () => {
+            const [currentStep, setCurrentStep] = useState(1);
+            const [formData, setFormData] = useState({
+                companyName: '',
+                contactName: '',
+                industry: '',
+                persona: ''
+            });
+            
+            const personas = [
+                { id: 'cost-conscious-employer', title: 'The Cost-Conscious Employer', description: 'Small Business Owner' },
+                { id: 'benefits-optimizer', title: 'The Benefits Optimizer', description: 'HR Manager' },
+                { id: 'roi-focused-executive', title: 'The ROI-Focused Executive', description: 'CFO / Finance Lead' },
+                { id: 'gatekeeper', title: 'The Gatekeeper', description: 'Administrative Assistant' }
+            ];
+            
+            const industries = [
+                { id: 'manufacturing', name: 'Manufacturing' },
+                { id: 'technology', name: 'Technology' },
+                { id: 'professional-services', name: 'Professional Services' },
+                { id: 'healthcare', name: 'Healthcare' },
+                { id: 'retail', name: 'Retail' },
+                { id: 'construction', name: 'Construction' }
+            ];
+            
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (formData.companyName && formData.contactName && formData.industry && formData.persona) {
+                    setCurrentStep(2);
+                }
+            };
+            
+            const selectedPersona = personas.find(p => p.id === formData.persona);
+            const selectedIndustry = industries.find(i => i.id === formData.industry);
+            
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {/* Header */}
+                    <header className="bg-white shadow-sm border-b border-gray-200">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div className="flex items-center space-x-4">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-8 h-8 bg-primary-300 rounded-lg flex items-center justify-center">
+                                            <span className="text-white font-bold text-sm">W</span>
+                                        </div>
+                                        <div>
+                                            <h1 className="text-xl font-bold text-gray-900">The W.O.L.F. Den</h1>
+                                            <p className="text-xs text-gray-600">Campbell & Co. Sales Assistant</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex space-x-1">
+                                    <button className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium ${currentStep === 1 ? 'bg-primary-300 text-white' : 'text-gray-600'}`}>
+                                        Hunt Planner
+                                    </button>
+                                    <button className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium ${currentStep === 2 ? 'bg-primary-300 text-white' : 'text-gray-600'}`}>
+                                        Call Guide
+                                    </button>
+                                    <button className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-600">
+                                        Call Results
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {currentStep === 1 && (
+                            <div className="space-y-6">
+                                <div className="text-center">
+                                    <h1 className="text-3xl font-bold text-gray-900 mb-2">The Hunt Planner</h1>
+                                    <p className="text-lg text-gray-600">Build the perfect call strategy with tactical intelligence</p>
+                                </div>
+                                
+                                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-1">Step 1: Target Acquisition</h3>
+                                    <p className="text-sm text-gray-600 mb-4">Identify your prospect and their context</p>
+                                    
+                                    <form onSubmit={handleSubmit}>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.companyName}
+                                                    onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                                                    placeholder="e.g., ABC Manufacturing Inc."
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-300"
+                                                    required
+                                                />
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.contactName}
+                                                    onChange={(e) => setFormData({...formData, contactName: e.target.value})}
+                                                    placeholder="e.g., John Smith"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-300"
+                                                    required
+                                                />
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Industry *</label>
+                                                <select
+                                                    value={formData.industry}
+                                                    onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
+                                                    required
+                                                >
+                                                    <option value="">Select industry...</option>
+                                                    {industries.map(industry => (
+                                                        <option key={industry.id} value={industry.id}>{industry.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Stakeholder Persona *</label>
+                                                <select
+                                                    value={formData.persona}
+                                                    onChange={(e) => setFormData({...formData, persona: e.target.value})}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-300"
+                                                    required
+                                                >
+                                                    <option value="">Select persona...</option>
+                                                    {personas.map(persona => (
+                                                        <option key={persona.id} value={persona.id}>{persona.title}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-4">
+                                            <button
+                                                type="submit"
+                                                className="bg-primary-300 hover:bg-primary-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+                                            >
+                                                🎯 Lock Target
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                
+                                {selectedPersona && (
+                                    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-1">Step 2: Persona Intelligence - {selectedPersona.title}</h3>
+                                        <p className="text-sm text-gray-600 mb-4">{selectedPersona.description}</p>
+                                        
+                                        <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                                            <h4 className="font-semibold text-primary-900 mb-2">Key Insights for {selectedPersona.title}</h4>
+                                            <p className="text-sm text-primary-800">
+                                                {selectedPersona.id === 'cost-conscious-employer' && "Focus on cost savings, ROI, and administrative efficiency. They value practical solutions that don't add complexity."}
+                                                {selectedPersona.id === 'benefits-optimizer' && "Emphasize employee engagement, wellness trends, and strategic HR value. They need data to justify decisions to leadership."}
+                                                {selectedPersona.id === 'roi-focused-executive' && "Lead with financial metrics, predictability, and risk mitigation. Everything must tie back to bottom-line impact."}
+                                                {selectedPersona.id === 'gatekeeper' && "Be respectful, concise, and clear about your value proposition. Help them understand why this matters to their boss."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {currentStep === 2 && (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Call Guide Generated</h1>
+                                        <p className="text-lg text-gray-600">Your comprehensive call preparation guide for {formData.companyName}</p>
+                                    </div>
+                                    <div className="flex space-x-3">
+                                        <button 
+                                            onClick={() => setCurrentStep(1)}
+                                            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg"
+                                        >
+                                            ← Back
+                                        </button>
+                                        <button 
+                                            onClick={() => window.print()}
+                                            className="bg-primary-300 hover:bg-primary-400 text-white font-semibold py-2 px-4 rounded-lg"
+                                        >
+                                            🖨️ Print Call Guide
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+                                    {/* Battle Card Content */}
+                                    <div className="border-b border-gray-200 pb-4 mb-6">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h1 className="text-2xl font-bold text-gray-900">THE W.O.L.F. DEN</h1>
+                                                <p className="text-sm text-gray-600">Campbell & Co. Call Guide</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm text-gray-600">Generated: {new Date().toLocaleDateString()}</p>
+                                                <p className="text-sm text-gray-600">Target: {formData.companyName}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-6 mb-6">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 mb-2">TARGET PROFILE</h3>
+                                            <div className="space-y-1 text-sm">
+                                                <p><span className="font-medium">Company:</span> {formData.companyName}</p>
+                                                <p><span className="font-medium">Contact:</span> {formData.contactName}</p>
+                                                <p><span className="font-medium">Industry:</span> {selectedIndustry?.name}</p>
+                                                <p><span className="font-medium">Persona:</span> {selectedPersona?.title}</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 mb-2">STRATEGIC OPENER</h3>
+                                            <div className="border-l-4 border-primary-300 pl-3">
+                                                <p className="text-sm text-gray-900">
+                                                    {selectedPersona?.id === 'cost-conscious-employer' && "I work with local business owners to get more value from the money they're already spending on benefits. With costs rising, is that something on your mind?"}
+                                                    {selectedPersona?.id === 'benefits-optimizer' && "Many HR leaders are finding that traditional benefits plans aren't keeping up with employee needs around mental health. We're helping companies build more supportive plans that also improve retention. Is that a priority for you?"}
+                                                    {selectedPersona?.id === 'roi-focused-executive' && "With the current economic climate, many CFOs are focused on cost predictability. I'm calling about a strategic approach to benefits that can lock in savings and provide a clearer ROI. Would that be worth 15 minutes?"}
+                                                    {selectedPersona?.id === 'gatekeeper' && "Hi, I'm calling to speak with [Decision Maker] about a strategic review that could help reduce benefits costs. This typically takes 15 minutes and has helped similar businesses save 10-15%. Would they be interested?"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="border-t border-gray-200 pt-4 mt-6">
+                                        <div className="flex justify-between items-center text-xs text-gray-500">
+                                            <p>Campbell & Co. - Your Trusted Insurance Partner</p>
+                                            <p>The W.O.L.F. Den: Wisdom • Opportunity • Leadership • Focus</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                                        <h4 className="font-semibold text-primary-900 mb-2">🎮 New Gamification Features</h4>
+                                        <ul className="text-sm text-primary-800 space-y-1">
+                                            <li>• <strong>Three.js Fireworks:</strong> Spectacular celebrations for call success</li>
+                                            <li>• <strong>Real-time Call Timer:</strong> Track optimal call duration by persona</li>
+                                            <li>• <strong>Success Button:</strong> Click to trigger fireworks celebration</li>
+                                            <li>• <strong>Achievement Points:</strong> Gamified scoring system</li>
+                                            <li>• <strong>Visual Rewards:</strong> Confetti and animated feedback</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <h4 className="font-semibold text-blue-900 mb-2">📊 Enhanced Intelligence System</h4>
+                                        <ul className="text-sm text-blue-800 space-y-1">
+                                            <li>• <strong>Live 2025 Industry Data:</strong> Real-time statistics and trends</li>
+                                            <li>• <strong>Strategic Closing CTAs:</strong> Outcome-specific closing techniques</li>
+                                            <li>• <strong>Success Rate Analytics:</strong> Historical performance data</li>
+                                            <li>• <strong>Thought Leadership:</strong> Industry-specific conversation starters</li>
+                                            <li>• <strong>Comprehensive Objection Handling:</strong> 15+ scenarios covered</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                        <h4 className="font-semibold text-green-900 mb-2">✅ Core Features</h4>
+                                        <ul className="text-sm text-green-800 space-y-1">
+                                            <li>• <strong>Hunt Planner:</strong> Target acquisition with persona intelligence</li>
+                                            <li>• <strong>Call Guide:</strong> Comprehensive preparation with timer and success tracking</li>
+                                            <li>• <strong>Campbell & Co. Branding:</strong> Professional design with brand colors</li>
+                                            <li>• <strong>Responsive Design:</strong> Works on desktop, tablet, and mobile</li>
+                                            <li>• <strong>Full Application:</strong> Complete React app ready for deployment</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+        
+        ReactDOM.render(<WolfDenDemo />, document.getElementById('root'));
+    </script>
+</body>
+</html>
