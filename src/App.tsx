@@ -4,17 +4,22 @@ import Layout from '@/components/common/Layout';
 import LoginScreen from '@/components/auth/LoginScreen';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ShortcutsHelp from '@/components/common/ShortcutsHelp';
+import SkeletonLoader from '@/components/common/SkeletonLoader';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 import ThemeProvider from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useAppStore } from '@/store';
 import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
 
 // Lazy load modules for code splitting
-const HuntPlanner = lazy(() => import('@/components/modules/HuntPlanner'));
-const CallSequencePlanner = lazy(() => import('@/components/planning/CallSequencePlanner'));
+const Dashboard = lazy(() => import('@/components/modules/Dashboard'));
+const IntegratedCallPlanner = lazy(() => import('@/components/planning/IntegratedCallPlanner'));
 const CallGuide = lazy(() => import('@/components/modules/BattleCard'));
 const LiveCallAssistance = lazy(() => import('@/components/callflow/LiveCallAssistance'));
 const EnhancedPostGame = lazy(() => import('@/components/analytics/EnhancedPostGame'));
+const HelpCenter = lazy(() => import('@/components/modules/HelpCenter'));
+const Profile = lazy(() => import('@/components/modules/Profile'));
+const Resources = lazy(() => import('@/components/modules/Resources'));
 const AdminDashboard = lazy(() => import('@/components/admin/AdminDashboard'));
 
 type AppView = 'main' | 'admin';
@@ -34,10 +39,10 @@ function AppContent() {
 
   const renderCurrentModule = () => {
     const ModuleLoader = (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading module...</p>
+      <div className="animate-fadeIn">
+        <SkeletonLoader variant="card" />
+        <div className="mt-6">
+          <SkeletonLoader variant="list" lines={3} />
         </div>
       </div>
     );
@@ -46,18 +51,24 @@ function AppContent() {
       <Suspense fallback={ModuleLoader}>
         {(() => {
           switch (currentModule) {
-            case 'hunt-planner':
-              return <HuntPlanner />;
-            case 'call-sequence':
-              return <CallSequencePlanner />;
+            case 'dashboard':
+              return <Dashboard />;
+            case 'call-planner':
+              return <IntegratedCallPlanner />;
             case 'battle-card':
               return <CallGuide />;
             case 'live-call':
               return <LiveCallAssistance />;
             case 'post-game':
               return <EnhancedPostGame />;
+            case 'help-center':
+              return <HelpCenter />;
+            case 'profile':
+              return <Profile />;
+            case 'resources':
+              return <Resources />;
             default:
-              return <HuntPlanner />;
+              return <Dashboard />;
           }
         })()}
       </Suspense>
@@ -123,14 +134,7 @@ function AppContent() {
           
           {/* Admin Content */}
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
-                </div>
-              </div>
-            }>
+            <Suspense fallback={<LoadingSpinner size="lg" message="Loading admin dashboard..." />}>
               <AdminDashboard />
             </Suspense>
           </main>
