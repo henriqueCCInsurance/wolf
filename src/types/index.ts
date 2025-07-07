@@ -167,3 +167,36 @@ export interface TeamPerformance {
   };
   memberPerformance: PerformanceMetrics[];
 }
+
+// Export utility types
+export type TimePeriod = 'week' | 'month' | 'quarter' | 'year';
+
+export interface ExportableData {
+  [key: string]: string | number | boolean | Date | null | undefined;
+}
+
+export interface ChartDataPoint {
+  name: string;
+  value: number;
+  [key: string]: string | number;
+}
+
+// Web Search API types
+export interface SearchApiItem {
+  title?: string;
+  snippet?: string;
+  link?: string;
+  displayLink?: string;
+}
+
+export interface BingSearchItem {
+  name?: string;
+  snippet?: string;
+  url?: string;
+}
+
+export interface SerpApiItem {
+  title?: string;
+  snippet?: string;
+  link?: string;
+}

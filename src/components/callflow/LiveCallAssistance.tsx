@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Play, 
@@ -118,7 +118,7 @@ const LiveCallAssistance: React.FC = () => {
   }, [prospect]);
   
   // Initialize call flow steps with selected content integration
-  const initializeCallFlowSteps = (): CallFlowStep[] => {
+  const initializeCallFlowSteps = useCallback((): CallFlowStep[] => {
     const baseSteps = [
       {
         id: 'opening',
@@ -185,14 +185,14 @@ const LiveCallAssistance: React.FC = () => {
         selectedContent: stepContent.length > 0 ? stepContent : undefined
       };
     });
-  };
+  }, [selectedContent]);
 
   const [callFlowSteps, setCallFlowSteps] = useState<CallFlowStep[]>(initializeCallFlowSteps());
 
   // Update call flow steps when selected content changes
   useEffect(() => {
     setCallFlowSteps(initializeCallFlowSteps());
-  }, [selectedContent]); // initializeCallFlowSteps is stable as it only depends on selectedContent
+  }, [initializeCallFlowSteps]);
 
   // Start the call session (timer) without Zoom
   const handleStartSession = () => {

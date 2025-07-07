@@ -1,4 +1,4 @@
-import { WebSearchResult } from '@/types';
+import { WebSearchResult, SearchApiItem, BingSearchItem, SerpApiItem } from '@/types';
 import axios from 'axios';
 
 // Configuration for different search providers
@@ -93,7 +93,7 @@ export class EnhancedWebSearchService {
       timeout: this.config.timeout
     });
 
-    return response.data.items?.map((item: any) => ({
+    return response.data.items?.map((item: SearchApiItem) => ({
       title: item.title || 'No Title',
       snippet: item.snippet || 'No description available',
       url: item.link || '',
@@ -119,7 +119,7 @@ export class EnhancedWebSearchService {
       timeout: this.config.timeout
     });
 
-    return response.data.webPages?.value?.map((item: any) => ({
+    return response.data.webPages?.value?.map((item: BingSearchItem) => ({
       title: item.name || 'No Title',
       snippet: item.snippet || 'No description available',
       url: item.url || '',
@@ -144,7 +144,7 @@ export class EnhancedWebSearchService {
       timeout: this.config.timeout
     });
 
-    return response.data.organic_results?.map((item: any) => ({
+    return response.data.organic_results?.map((item: SerpApiItem) => ({
       title: item.title || 'No Title',
       snippet: item.snippet || 'No description available',
       url: item.link || '',

@@ -1,172 +1,173 @@
+import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/services/database';
 import { User, LoginCredentials } from '@/types';
 
-// Mock users for development
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'admin@campbellco.com',
-    name: 'Sarah Johnson',
-    role: 'admin',
-    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b332ad04?w=100&h=100&fit=crop&crop=face',
-    createdAt: new Date('2024-01-01'),
-    lastLogin: new Date(),
-    settings: {
-      theme: 'light',
-      notifications: true,
-      autoSave: true,
-      defaultCallObjectives: ['meeting-booked', 'follow-up']
-    }
-  },
-  {
-    id: '2',
-    email: 'john.smith@campbellco.com',
-    name: 'John Smith',
-    role: 'salesperson',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-    createdAt: new Date('2024-01-15'),
-    lastLogin: new Date(),
-    settings: {
-      theme: 'light',
-      notifications: true,
-      autoSave: true,
-      defaultCallObjectives: ['meeting-booked', 'intelligence']
-    }
-  },
-  {
-    id: '3',
-    email: 'maria.garcia@campbellco.com',
-    name: 'Maria Garcia',
-    role: 'salesperson',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-    createdAt: new Date('2024-02-01'),
-    lastLogin: new Date(),
-    settings: {
-      theme: 'dark',
-      notifications: false,
-      autoSave: true,
-      defaultCallObjectives: ['meeting-booked', 'referral']
-    }
-  },
-  {
-    id: '4',
-    email: 'alex.chen@campbellco.com',
-    name: 'Alex Chen',
-    role: 'salesperson',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    createdAt: new Date('2024-02-15'),
-    lastLogin: new Date(),
-    settings: {
-      theme: 'light',
-      notifications: true,
-      autoSave: false,
-      defaultCallObjectives: ['meeting-booked', 'follow-up', 'intelligence']
-    }
-  }
-];
-
 class AuthService {
-  private currentUser: User | null = null;
+  async login(credentials: LoginCredentials): Promise<User> {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
 
-  // Simulate API call delay
-  private delay(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data.user) {
+      throw new Error('Login failed');
+    }
+
+    // Get the user profile from our users table
+    const user = await DatabaseService.getCurrentUser();
+    if (!user) {
+      throw new Error('User profile not found');
+    }
+
+    return user;
   }
 
-  async login(credentials: LoginCredentials): Promise<User> {
-    await this.delay(1000); // Simulate API call
+  async signUp(email: string, password: string, name: string, role: 'salesperson' | 'admin' = 'salesperson'): Promise<User> {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role
+        }
+      }
+    });
 
-    // Mock authentication - in production, this would verify with backend
-    const user = mockUsers.find(u => u.email === credentials.email);
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data.user) {
+      throw new Error('Sign up failed');
+    }
+
+    // The user profile is automatically created by the trigger
+    // Wait a moment then get the profile
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
+    const user = await DatabaseService.getCurrentUser();
     if (!user) {
-      throw new Error('Invalid email or password');
+      throw new Error('User profile creation failed');
     }
 
-    // Mock password validation (all passwords are "password123" for demo)
-    if (credentials.password !== 'password123') {
-      throw new Error('Invalid email or password');
-    }
-
-    // Update last login
-    user.lastLogin = new Date();
-    this.currentUser = user;
-    
-    // Store in localStorage for persistence
-    localStorage.setItem('wolf_den_user', JSON.stringify(user));
-    
     return user;
   }
 
   async logout(): Promise<void> {
-    await this.delay(500);
-    this.currentUser = null;
-    localStorage.removeItem('wolf_den_user');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
   async getCurrentUser(): Promise<User | null> {
-    // Check if user is stored in localStorage
-    const storedUser = localStorage.getItem('wolf_den_user');
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        this.currentUser = user;
-        return user;
-      } catch (error) {
-        localStorage.removeItem('wolf_den_user');
-      }
+    try {
+      return await DatabaseService.getCurrentUser();
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
     }
-    return null;
   }
 
   async updateUserSettings(userId: string, settings: Partial<User['settings']>): Promise<User> {
-    await this.delay(500);
-    
-    const userIndex = mockUsers.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
-    }
-
-    mockUsers[userIndex].settings = { ...mockUsers[userIndex].settings!, ...settings };
-    this.currentUser = mockUsers[userIndex];
-    
-    localStorage.setItem('wolf_den_user', JSON.stringify(this.currentUser));
-    
-    return this.currentUser;
+    return await DatabaseService.updateUserProfile(userId, { settings });
   }
 
   async getAllUsers(): Promise<User[]> {
-    await this.delay(800);
-    return mockUsers.filter(u => u.role === 'salesperson');
-  }
-
-  async createUser(userData: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-    await this.delay(1000);
-    
-    const newUser: User = {
-      ...userData,
-      id: (mockUsers.length + 1).toString(),
-      createdAt: new Date(),
-      settings: {
-        theme: 'light',
-        notifications: true,
-        autoSave: true,
-        defaultCallObjectives: ['meeting-booked']
-      }
-    };
-
-    mockUsers.push(newUser);
-    return newUser;
-  }
-
-  async deleteUser(userId: string): Promise<void> {
-    await this.delay(500);
-    
-    const userIndex = mockUsers.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
+    // Only allow admins to get all users
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new Error('Unauthorized');
     }
 
-    mockUsers.splice(userIndex, 1);
+    return await DatabaseService.getAllUsers();
+  }
+
+  async createUser(_userData: Omit<User, 'id' | 'createdAt'>): Promise<User> {
+    // This would typically be done through the admin panel
+    // For now, we'll use signUp with admin privileges
+    throw new Error('User creation through admin panel not implemented yet');
+  }
+
+  async deleteUser(_userId: string): Promise<void> {
+    // Only allow admins to delete users
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new Error('Unauthorized');
+    }
+
+    // Note: This would need to be implemented with proper cascade handling
+    throw new Error('User deletion not implemented yet');
+  }
+
+  async resetPassword(email: string): Promise<void> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async updatePassword(newPassword: string): Promise<void> {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async signInWithGoogle(): Promise<User> {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // The user will be redirected to Google OAuth
+    // After successful auth, they'll be redirected back with the user data
+    throw new Error('Redirecting to Google OAuth...');
+  }
+
+  async signInWithGitHub(): Promise<User> {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // The user will be redirected to GitHub OAuth
+    throw new Error('Redirecting to GitHub OAuth...');
+  }
+
+  // Listen for auth state changes
+  onAuthStateChange(callback: (user: User | null) => void) {
+    return supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const user = await DatabaseService.getCurrentUser();
+        callback(user);
+      } else {
+        callback(null);
+      }
+    });
   }
 
   // Helper method to check permissions

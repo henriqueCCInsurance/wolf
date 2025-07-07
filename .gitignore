@@ -44,3 +44,5 @@ netlify-deployment-full/
 # PDF and Document files (if you want to exclude them)
 *.pdf
 *.docx
+# Local Netlify folder
+.netlify

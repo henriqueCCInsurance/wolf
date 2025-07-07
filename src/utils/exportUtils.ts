@@ -1,4 +1,4 @@
-import { CallLog, BattleCard } from '@/types';
+import { CallLog, BattleCard, ExportableData } from '@/types';
 import { format } from 'date-fns';
 
 export interface ExportData {
@@ -34,7 +34,7 @@ export interface PerformanceMetrics {
 }
 
 // Convert data to CSV format
-export const convertToCSV = (data: any[], headers: string[]): string => {
+export const convertToCSV = (data: ExportableData[], headers: string[]): string => {
   const csvHeaders = headers.join(',');
   const csvRows = data.map(row => 
     headers.map(header => {
@@ -266,7 +266,7 @@ export const importFromJSON = (fileContent: string): ImportResult => {
 };
 
 // Data Validation
-const validateImportData = (data: any): ValidationResult => {
+const validateImportData = (data: unknown): ValidationResult => {
   const errors: string[] = [];
   const warnings: string[] = [];
   
@@ -276,17 +276,19 @@ const validateImportData = (data: any): ValidationResult => {
     return { isValid: false, errors, warnings };
   }
   
-  if (!Array.isArray(data.callLogs)) {
+  const exportData = data as Record<string, unknown>;
+  
+  if (!Array.isArray(exportData.callLogs)) {
     errors.push('Call logs must be an array');
   }
   
-  if (!Array.isArray(data.battleCards)) {
+  if (!Array.isArray(exportData.battleCards)) {
     errors.push('Battle cards must be an array');
   }
   
   // Validate call logs
-  if (Array.isArray(data.callLogs)) {
-    data.callLogs.forEach((log: any, index: number) => {
+  if (Array.isArray(exportData.callLogs)) {
+    exportData.callLogs.forEach((log: Partial<CallLog>, index: number) => {
       if (!log.id || typeof log.id !== 'string') {
         errors.push(`Call log ${index + 1}: Missing or invalid ID`);
       }
@@ -309,8 +311,8 @@ const validateImportData = (data: any): ValidationResult => {
   }
   
   // Validate battle cards
-  if (Array.isArray(data.battleCards)) {
-    data.battleCards.forEach((card: any, index: number) => {
+  if (Array.isArray(exportData.battleCards)) {
+    exportData.battleCards.forEach((card: Partial<BattleCard>, index: number) => {
       if (!card.lead || typeof card.lead !== 'object') {
         errors.push(`Battle card ${index + 1}: Missing or invalid lead data`);
       }
@@ -324,8 +326,8 @@ const validateImportData = (data: any): ValidationResult => {
   }
   
   // Version compatibility check
-  if (data.exportVersion && data.exportVersion !== '1.0') {
-    warnings.push(`Data exported from version ${data.exportVersion}, compatibility not guaranteed`);
+  if (exportData.exportVersion && exportData.exportVersion !== '1.0') {
+    warnings.push(`Data exported from version ${exportData.exportVersion}, compatibility not guaranteed`);
   }
   
   return {
@@ -390,7 +392,7 @@ export const readFileAsText = (file: File): Promise<string> => {
 };
 
 // Data migration utilities
-export const migrateDataFormat = (data: any, fromVersion: string, toVersion: string): any => {
+export const migrateDataFormat = (data: unknown, fromVersion: string, toVersion: string): unknown => {
   // Future-proofing for data format changes
   if (fromVersion === toVersion) return data;
   

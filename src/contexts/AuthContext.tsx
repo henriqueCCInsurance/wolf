@@ -65,7 +65,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Check for existing session on mount
+  // Check for existing session on mount and listen for auth changes
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
@@ -81,6 +81,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     checkAuthStatus();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = authService.onAuthStateChange((user) => {
+      if (user) {
+        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+      } else {
+        dispatch({ type: 'LOGIN_FAILURE' });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (credentials: LoginCredentials) => {

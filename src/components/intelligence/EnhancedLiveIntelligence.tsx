@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, BarChart3, Lightbulb, RefreshCw, Calendar, ExternalLink, Globe, Settings } from 'lucide-react';
 import { industryIntelligence2025 } from '@/data/industryIntelligence2025';
@@ -25,21 +25,7 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
 
   const industryData = industryIntelligence2025.find(ind => ind.id === industry);
 
-  useEffect(() => {
-    // Simulate real-time data refresh
-    const interval = setInterval(() => {
-      setLastUpdated(new Date());
-    }, 300000); // Update every 5 minutes
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Load live intelligence when component mounts or industry changes
-  useEffect(() => {
-    loadLiveIntelligence();
-  }, [industry]);
-
-  const loadLiveIntelligence = async () => {
+  const loadLiveIntelligence = useCallback(async () => {
     if (liveResults.length > 0) return; // Already loaded
     
     setLoadingLive(true);
@@ -52,7 +38,21 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
     } finally {
       setLoadingLive(false);
     }
-  };
+  }, [industry, liveResults.length, setDynamicIntelligence]);
+
+  useEffect(() => {
+    // Simulate real-time data refresh
+    const interval = setInterval(() => {
+      setLastUpdated(new Date());
+    }, 300000); // Update every 5 minutes
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load live intelligence when component mounts or industry changes
+  useEffect(() => {
+    loadLiveIntelligence();
+  }, [loadLiveIntelligence]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

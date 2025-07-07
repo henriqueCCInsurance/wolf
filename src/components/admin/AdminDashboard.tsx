@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, TeamPerformance } from '@/types';
+import { User, TeamPerformance, TimePeriod } from '@/types';
 import { authService } from '@/services/authService';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -26,7 +26,7 @@ const AdminDashboard: React.FC = () => {
   const [salespeople, setSalespeople] = useState<User[]>([]);
   const [teamMetrics, setTeamMetrics] = useState<TeamPerformance | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter'>('month');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
 
   // Mock performance data for demo
   const mockPerformanceData = [
@@ -115,7 +115,7 @@ const AdminDashboard: React.FC = () => {
         <div className="flex items-center gap-3">
           <select
             value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value as any)}
+            onChange={(e) => setSelectedPeriod(e.target.value as TimePeriod)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
           >
             <option value="week">This Week</option>

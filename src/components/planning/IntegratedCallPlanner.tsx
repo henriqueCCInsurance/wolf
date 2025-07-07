@@ -111,7 +111,7 @@ const IntegratedCallPlanner: React.FC = () => {
       newErrors.contactPhone = 'Phone number is required';
     } else {
       // Basic phone format validation (allows various formats)
-      const phoneRegex = /^[\d\s\-\(\)\+\.]+$/;
+      const phoneRegex = /^[\d\s\-())+.]+$/;
       if (!phoneRegex.test(formData.contactPhone) || formData.contactPhone.replace(/\D/g, '').length < 10) {
         newErrors.contactPhone = 'Please enter a valid phone number (at least 10 digits)';
       }
