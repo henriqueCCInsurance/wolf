@@ -251,7 +251,7 @@ const AdminDashboard: React.FC = () => {
       <Card title="Team Members" subtitle="Manage your sales team">
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               {salespeople.length} team members
             </div>
             <Button>
@@ -262,8 +262,8 @@ const AdminDashboard: React.FC = () => {
 
           <div className="space-y-3">
             {salespeople.map((person) => (
-              <div key={person.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+              <div key={person.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
                   {person.avatar ? (
                     <img 
                       src={person.avatar} 
@@ -271,15 +271,15 @@ const AdminDashboard: React.FC = () => {
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
-                    <UserCheck className="w-5 h-5 text-gray-600" />
+                    <UserCheck className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">{person.name}</div>
-                  <div className="text-sm text-gray-600">{person.email}</div>
+                  <div className="font-medium text-gray-900 dark:text-white">{person.name}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">{person.email}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
                     {person.lastLogin ? 
                       `Last active: ${new Date(person.lastLogin).toLocaleDateString()}` : 
                       'Never logged in'

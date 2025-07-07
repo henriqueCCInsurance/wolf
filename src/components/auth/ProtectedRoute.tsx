@@ -18,7 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <div className="text-gray-600">Loading...</div>
+          <div className="text-gray-600 dark:text-gray-300">Loading...</div>
         </div>
       </div>
     );
@@ -38,7 +38,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           <p className="text-gray-600 mb-4">
             You don't have the required permissions to access this page.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-300">
             Required role: <span className="font-medium capitalize">{requiredRole}</span>
             <br />
             Your role: <span className="font-medium capitalize">{user.role}</span>

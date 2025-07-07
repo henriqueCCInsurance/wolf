@@ -18,24 +18,38 @@ export const useKeyboardShortcuts = () => {
   const shortcuts: KeyboardShortcut[] = [
     // Navigation shortcuts
     {
+      key: 'd',
+      altKey: true,
+      action: () => setCurrentModule('dashboard'),
+      description: 'Go to Dashboard',
+      category: 'Navigation'
+    },
+    {
       key: '1',
       altKey: true,
-      action: () => setCurrentModule('hunt-planner'),
-      description: 'Go to Hunt Planner',
+      action: () => setCurrentModule('call-planner'),
+      description: 'Go to Planner (Step 1)',
       category: 'Navigation'
     },
     {
       key: '2',
       altKey: true,
-      action: () => setCurrentModule('battle-card'),
-      description: 'Go to Battle Card',
+      action: () => setCurrentModule('call-planner'),
+      description: 'Go to Planner (Step 2)',
       category: 'Navigation'
     },
     {
       key: '3',
       altKey: true,
+      action: () => setCurrentModule('battle-card'),
+      description: 'Go to Guide (Step 3)',
+      category: 'Navigation'
+    },
+    {
+      key: '4',
+      altKey: true,
       action: () => setCurrentModule('post-game'),
-      description: 'Go to Post Game',
+      description: 'Go to Results',
       category: 'Navigation'
     },
     // Quick actions
@@ -44,7 +58,7 @@ export const useKeyboardShortcuts = () => {
       ctrlKey: true,
       action: () => {
         resetProspect();
-        setCurrentModule('hunt-planner');
+        setCurrentModule('call-planner');
       },
       description: 'New prospect',
       category: 'Quick Actions'

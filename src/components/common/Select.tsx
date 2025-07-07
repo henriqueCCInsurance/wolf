@@ -31,9 +31,9 @@ const Select: React.FC<SelectProps> = ({
   return (
     <div className={className}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-red-500 dark:text-red-400 ml-1">*</span>}
         </label>
       )}
       <select
@@ -41,8 +41,8 @@ const Select: React.FC<SelectProps> = ({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         disabled={disabled}
-        className={`form-select ${error ? 'border-red-500 focus:ring-red-500' : ''} ${
-          disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+        className={`form-select ${error ? 'border-red-500 focus:ring-red-500 dark:border-red-400 dark:focus:ring-red-400' : ''} ${
+          disabled ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''
         }`}
       >
         {placeholder && (
@@ -57,7 +57,7 @@ const Select: React.FC<SelectProps> = ({
         ))}
       </select>
       {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
+        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
   );

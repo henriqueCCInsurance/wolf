@@ -226,7 +226,7 @@ export const exportToJSON = (callLogs: CallLog[], battleCards: BattleCard[]): vo
     performanceMetrics: calculatePerformanceMetrics(callLogs),
     exportVersion: '1.0',
     exportTimestamp: new Date().toISOString(),
-    appVersion: 'W.O.L.F. Den v1.0'
+    appVersion: 'W.O.L.F v1.0'
   };
 
   const jsonString = JSON.stringify(exportData, null, 2);

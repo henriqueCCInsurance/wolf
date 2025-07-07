@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import Confetti from 'react-confetti';
 import * as THREE from 'three';
+import { useAppStore } from '@/store';
 
 interface CelebrationSystemProps {
   isActive: boolean;
@@ -38,6 +39,8 @@ const CelebrationSystem: React.FC<CelebrationSystemProps> = ({
   const fireworksRef = useRef<Firework[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const { profile } = useAppStore();
+  const [currentImageIndex] = useState(0);
 
   const celebrationConfig = {
     'meeting-booked': {
@@ -271,7 +274,7 @@ const CelebrationSystem: React.FC<CelebrationSystemProps> = ({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="text-center"
+          className="text-center max-w-2xl mx-auto px-4"
         >
           <motion.div
             animate={{ 
@@ -307,6 +310,35 @@ const CelebrationSystem: React.FC<CelebrationSystemProps> = ({
           >
             {config.subtitle}
           </motion.p>
+          
+          {/* User's Why I Sell */}
+          {profile.whyISell && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2, duration: 0.5 }}
+              className="mt-6 p-4 bg-white/20 backdrop-blur-sm rounded-lg"
+            >
+              <p className="text-lg text-white font-semibold mb-2">Remember Your Why:</p>
+              <p className="text-white/90 italic">{profile.whyISell}</p>
+            </motion.div>
+          )}
+          
+          {/* Motivational Images */}
+          {profile.motivationalImages && profile.motivationalImages.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.5, duration: 0.5 }}
+              className="mt-4"
+            >
+              <img
+                src={profile.motivationalImages[currentImageIndex % profile.motivationalImages.length]}
+                alt="Your motivation"
+                className="w-48 h-32 object-cover rounded-lg mx-auto shadow-lg"
+              />
+            </motion.div>
+          )}
           
           <motion.div
             initial={{ scale: 0 }}

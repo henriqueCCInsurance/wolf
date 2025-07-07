@@ -100,7 +100,7 @@ function AppContent() {
                       </div>
                     </div>
                     <div>
-                      <h1 className="text-lg font-bold text-gray-900">W.O.L.F. Den Admin</h1>
+                      <h1 className="text-lg font-bold text-gray-900">W.O.L.F Admin</h1>
                     </div>
                   </div>
                 </div>

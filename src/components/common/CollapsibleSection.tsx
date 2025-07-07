@@ -33,11 +33,11 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 shadow-sm ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
       {/* Header - Always Visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
+        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
       >
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
@@ -46,7 +46,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
             ) : (
               <ChevronRight className="w-5 h-5 text-gray-500" />
             )}
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           </div>
           
           {/* Badges */}
@@ -92,7 +92,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           >
             <div className="px-6 pb-6">
               {subtitle && (
-                <p className="text-gray-600 mb-4 text-sm">{subtitle}</p>
+                <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">{subtitle}</p>
               )}
               {children}
             </div>

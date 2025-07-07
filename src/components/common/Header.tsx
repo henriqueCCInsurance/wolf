@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { FileText, BarChart3, Database, Activity, User, LogOut, Settings, Shield, Calendar, Phone, LayoutDashboard, HelpCircle, Zap, Gauge, BookOpen, Menu } from 'lucide-react';
+import { FileText, BarChart3, Database, Activity, User, LogOut, Settings, Shield, Calendar, Phone, LayoutDashboard, HelpCircle, Zap, Gauge, BookOpen, Menu, Sun, Moon } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import DataManager from './DataManager';
 import AdvancedAnalytics from './AdvancedAnalytics';
-import ThemeToggle from './ThemeToggle';
 import Toggle from './Toggle';
 import MobileMenu from './MobileMenu';
 
@@ -15,6 +15,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onNavigateToAdmin }) => {
   const { currentModule, setCurrentModule, advancedMode, setAdvancedMode } = useAppStore();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [showDataManager, setShowDataManager] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -22,10 +23,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigateToAdmin }) => {
 
   const modules = [
     { id: 'dashboard' as const, name: 'Dashboard', icon: LayoutDashboard },
-    { id: 'call-planner' as const, name: 'Call Planner', icon: Calendar },
-    { id: 'battle-card' as const, name: 'Call Guide', icon: FileText },
-    { id: 'live-call' as const, name: 'Live Call', icon: Phone },
-    { id: 'post-game' as const, name: 'Call Results', icon: BarChart3 }
+    { id: 'call-planner' as const, name: 'Planner', icon: Calendar },
+    { id: 'battle-card' as const, name: 'Guide', icon: FileText },
+    { id: 'live-call' as const, name: 'Call', icon: Phone },
+    { id: 'post-game' as const, name: 'Results', icon: BarChart3 }
   ];
 
   return (
@@ -55,14 +56,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigateToAdmin }) => {
                 </div>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">The W.O.L.F. Den</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium hidden sm:block">Elite Sales Intelligence Platform</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">W.O.L.F</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium hidden sm:block">Sales Intelligence Platform</p>
               </div>
-            </div>
-            {/* Professional Badge */}
-            <div className="hidden lg:flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-full border border-primary-200 dark:border-primary-800">
-              <Shield size={14} className="text-primary-600 dark:text-primary-400" />
-              <span className="text-primary-700 dark:text-primary-300 text-xs font-semibold truncate max-w-[150px]">Elite Sales Intelligence</span>
             </div>
           </div>
 
@@ -107,46 +103,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigateToAdmin }) => {
               </div>
             </div>
             
-            {/* Help, Resources, Analytics, Data Management, and User Menu */}
-            <div className="border-l border-gray-200 dark:border-gray-700 pl-2 flex items-center space-x-1">
-              <button
-                onClick={() => setCurrentModule('resources')}
-                className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="Marketing Resources"
-              >
-                <BookOpen size={16} />
-                <span className="hidden lg:inline">Resources</span>
-              </button>
-              
-              <button
-                onClick={() => setCurrentModule('help-center')}
-                className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="Help Center"
-              >
-                <HelpCircle size={16} />
-                <span className="hidden lg:inline">Help</span>
-              </button>
-              
-              <button
-                onClick={() => setShowAnalytics(true)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="Advanced Analytics"
-              >
-                <Activity size={16} />
-                <span className="hidden lg:inline">Analytics</span>
-              </button>
-              
-              <button
-                onClick={() => setShowDataManager(true)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="Data Management"
-              >
-                <Database size={16} />
-                <span className="hidden lg:inline">Data</span>
-              </button>
-              
-              <ThemeToggle className="ml-2" />
-              
+            {/* User Menu */}
+            <div className="border-l border-gray-200 dark:border-gray-700 pl-2 flex items-center">
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
@@ -165,47 +123,112 @@ const Header: React.FC<HeaderProps> = ({ onNavigateToAdmin }) => {
                 </button>
                 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700">
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700">
                     <div className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700">
                       <div className="font-medium">{user?.name}</div>
                       <div className="text-gray-500 dark:text-gray-300 text-xs">{user?.email}</div>
                       <div className="text-gray-500 dark:text-gray-300 text-xs capitalize">{user?.role}</div>
                     </div>
                     
-                    {user?.role === 'admin' && onNavigateToAdmin && (
+                    {/* Tools & Support Section */}
+                    <div className="py-1 border-b border-gray-100 dark:border-gray-700">
                       <button
                         onClick={() => {
-                          onNavigateToAdmin();
+                          setCurrentModule('resources');
                           setShowUserMenu(false);
                         }}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        <Shield size={16} className="mr-2" />
-                        Admin Dashboard
+                        <BookOpen size={16} className="mr-2" />
+                        Resources
                       </button>
-                    )}
+                      
+                      <button
+                        onClick={() => {
+                          setCurrentModule('help-center');
+                          setShowUserMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <HelpCircle size={16} className="mr-2" />
+                        Help Center
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setShowAnalytics(true);
+                          setShowUserMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Activity size={16} className="mr-2" />
+                        Analytics
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setShowDataManager(true);
+                          setShowUserMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Database size={16} className="mr-2" />
+                        Data Management
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          toggleTheme();
+                          setShowUserMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        {theme === 'dark' ? (
+                          <Sun size={16} className="mr-2" />
+                        ) : (
+                          <Moon size={16} className="mr-2" />
+                        )}
+                        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                      </button>
+                    </div>
                     
-                    <button
-                      onClick={() => {
-                        setCurrentModule('profile');
-                        setShowUserMenu(false);
-                      }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      <Settings size={16} className="mr-2" />
-                      Profile & Settings
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        logout();
-                        setShowUserMenu(false);
-                      }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                      <LogOut size={16} className="mr-2" />
-                      Sign Out
-                    </button>
+                    {/* Profile & Admin Section */}
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setCurrentModule('profile');
+                          setShowUserMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Settings size={16} className="mr-2" />
+                        Profile & Settings
+                      </button>
+                      
+                      {user?.role === 'admin' && onNavigateToAdmin && (
+                        <button
+                          onClick={() => {
+                            onNavigateToAdmin();
+                            setShowUserMenu(false);
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <Shield size={16} className="mr-2" />
+                          Admin Dashboard
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => {
+                          logout();
+                          setShowUserMenu(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <LogOut size={16} className="mr-2" />
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

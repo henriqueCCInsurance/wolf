@@ -30,18 +30,22 @@ const LoginScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 flex transition-colors duration-200">
-      {/* Left Panel - Hero Image and Branding */}
+      {/* Left Panel - Abstract Gradient Background */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-primary-800"></div>
-        <div className="absolute inset-0 bg-black/20"></div>
-        
-        {/* Hero Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')`
-          }}
-        />
+        {/* Professional Abstract Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a2332] to-[#2c3e50]">
+          {/* Decorative gradient overlays for depth */}
+          <div className="absolute inset-0 opacity-50">
+            <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-primary-500/30 to-transparent rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-primary-600/20 to-transparent rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2"></div>
+            <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-gradient-radial from-white/5 to-transparent rounded-full blur-2xl transform -translate-x-1/2 -translate-y-1/2"></div>
+          </div>
+          
+          {/* Subtle pattern overlay */}
+          <div className="absolute inset-0 opacity-10" style={{
+            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.05) 35px, rgba(255,255,255,.05) 70px)`
+          }}></div>
+        </div>
         
         {/* Content Overlay */}
         <div className="relative z-10 flex flex-col justify-center items-center text-white p-12">
@@ -55,7 +59,7 @@ const LoginScreen: React.FC = () => {
             <div className="mb-8">
               <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 inline-block">
                 <div className="text-4xl font-bold text-white mb-2">
-                  W.O.L.F. DEN
+                  W.O.L.F
                 </div>
                 <div className="text-white/90 text-sm font-medium">
                   Campbell & Co. Sales Enablement
@@ -65,7 +69,7 @@ const LoginScreen: React.FC = () => {
 
             {/* Enhanced Tagline */}
             <h1 className="text-4xl font-bold mb-4 leading-tight">
-              Elite Sales Intelligence for 
+              Sales Intelligence for 
               <span className="text-primary-200"> Strategic Confidence</span>
             </h1>
             <p className="text-xl text-white/90 mb-8 max-w-lg leading-relaxed">
@@ -106,16 +110,16 @@ const LoginScreen: React.FC = () => {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="bg-primary-600 text-white rounded-lg p-4 inline-block mb-4">
-              <div className="text-2xl font-bold">W.O.L.F. DEN</div>
+              <div className="text-2xl font-bold">W.O.L.F</div>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome Back</h1>
-            <p className="text-gray-600 dark:text-gray-400">Sign in to your account</p>
+            <p className="text-gray-600 dark:text-gray-300">Sign in to your account</p>
           </div>
 
           {/* Desktop Header */}
           <div className="hidden lg:block mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Welcome Back</h1>
-            <p className="text-gray-600 dark:text-gray-400">Sign in to access your elite sales intelligence platform</p>
+            <p className="text-gray-600 dark:text-gray-300">Sign in to access your sales intelligence platform</p>
           </div>
 
           {/* Demo Credentials */}
@@ -143,7 +147,7 @@ const LoginScreen: React.FC = () => {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Email Address
               </label>
               <input
@@ -158,7 +162,7 @@ const LoginScreen: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Password
               </label>
               <div className="relative">
@@ -174,7 +178,7 @@ const LoginScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -193,14 +197,14 @@ const LoginScreen: React.FC = () => {
 
           {/* Quick Login Buttons */}
           <div className="mt-6 space-y-2">
-            <div className="text-center text-sm text-gray-600 dark:text-gray-400 mb-3">Quick Login:</div>
+            <div className="text-center text-sm text-gray-600 dark:text-gray-300 mb-3">Quick Login:</div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   setEmail('admin@campbellco.com');
                   setPassword('password123');
                 }}
-                className="flex-1 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors"
               >
                 Admin
               </button>
@@ -209,7 +213,7 @@ const LoginScreen: React.FC = () => {
                   setEmail('john.smith@campbellco.com');
                   setPassword('password123');
                 }}
-                className="flex-1 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors"
               >
                 Salesperson
               </button>
@@ -217,10 +221,10 @@ const LoginScreen: React.FC = () => {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 text-center text-sm text-gray-500">
-            <p>© 2024 Campbell & Co. All rights reserved.</p>
+          <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-300">
+            <p>© 2025 Campbell & Co. All rights reserved.</p>
             <p className="mt-1">
-              <span className="font-medium">W.O.L.F. Den:</span> Wisdom • Opportunity • Leadership • Focus
+              <span className="font-medium">W.O.L.F:</span> Wisdom • Opportunity • Leadership • Focus
             </p>
           </div>
         </motion.div>

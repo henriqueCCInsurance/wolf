@@ -2,6 +2,8 @@ export interface Lead {
   companyName: string;
   contactName: string;
   contactPhone?: string;
+  contactPosition?: string;
+  contactEmail?: string;
   industry: string;
   persona: PersonaType;
 }
@@ -50,6 +52,12 @@ export interface CallLog {
   keyTakeaway: string;
   createdAt: Date;
   callDuration?: number;
+  // New fields for sequence integration
+  sequenceId?: string;
+  contactId?: string;
+  startTime?: Date;
+  endTime?: Date;
+  attemptNumber?: number;
   additionalInfo?: {
     newContacts?: string;
     referrals?: string;

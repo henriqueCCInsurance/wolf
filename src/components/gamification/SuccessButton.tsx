@@ -138,8 +138,8 @@ const SuccessButton: React.FC<SuccessButtonProps> = ({
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trophy className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Congratulations!</h2>
-              <p className="text-lg text-gray-600">What type of success did you achieve?</p>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Congratulations!</h2>
+              <p className="text-lg text-gray-600 dark:text-gray-300">What type of success did you achieve?</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">

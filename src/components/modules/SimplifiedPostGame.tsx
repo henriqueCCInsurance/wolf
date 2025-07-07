@@ -6,10 +6,24 @@ import { CallLog } from '@/types';
 import { zohoCRMService } from '@/services/zohoCRM';
 
 const SimplifiedPostGame: React.FC = () => {
-  const { prospect, addCallLog, setCurrentModule } = useAppStore();
+  const { 
+    prospect, 
+    addCallLog, 
+    setCurrentModule, 
+    activeCallDuration, 
+    activeCallStartTime,
+    activeSequenceId,
+    callSequences 
+  } = useAppStore();
   const [selectedOutcome, setSelectedOutcome] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Find the current contact if we're in a sequence
+  const activeSequence = callSequences.find(seq => seq.id === activeSequenceId);
+  const currentContact = activeSequence?.contacts.find(c => 
+    c.companyName === prospect?.companyName && c.contactName === prospect?.contactName
+  );
 
   const outcomes = [
     {
@@ -68,6 +82,11 @@ const SimplifiedPostGame: React.FC = () => {
     if (!selectedOutcome || !prospect) return;
 
     setIsSubmitting(true);
+    
+    // Calculate attempt number for this contact
+    const previousCalls = currentContact?.id 
+      ? useAppStore.getState().getCallLogsForContact(currentContact.id).length 
+      : 0;
 
     const callLog: CallLog = {
       id: Date.now().toString(),
@@ -77,7 +96,13 @@ const SimplifiedPostGame: React.FC = () => {
       bestTalkingPoint: '',
       keyTakeaway: notes,
       createdAt: new Date(),
-      callDuration: 0
+      callDuration: activeCallDuration || 0,
+      // New fields
+      sequenceId: activeSequenceId || undefined,
+      contactId: currentContact?.id,
+      startTime: activeCallStartTime || undefined,
+      endTime: new Date(),
+      attemptNumber: previousCalls + 1
     };
 
     addCallLog(callLog);
@@ -88,7 +113,7 @@ const SimplifiedPostGame: React.FC = () => {
         prospect,
         selectedOutcome,
         notes,
-        0 // duration - could be tracked from call timer
+        activeCallDuration || 0
       );
       
       if (success) {
@@ -102,7 +127,7 @@ const SimplifiedPostGame: React.FC = () => {
     
     // Show success and return to planning
     setTimeout(() => {
-      setCurrentModule('hunt-planner');
+      setCurrentModule('call-planner');
     }, 1000);
   };
 
@@ -112,7 +137,7 @@ const SimplifiedPostGame: React.FC = () => {
         <Phone className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Call to Log</h2>
         <p className="text-gray-600 mb-6">Make a call first, then come back here</p>
-        <Button onClick={() => setCurrentModule('hunt-planner')}>
+        <Button onClick={() => setCurrentModule('call-planner')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Start New Call
         </Button>

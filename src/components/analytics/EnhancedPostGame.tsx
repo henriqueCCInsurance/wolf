@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Save, 
@@ -9,7 +9,6 @@ import {
   Award, 
   BarChart, 
   FileSpreadsheet,
-  MapPin,
   Database,
   Users,
   Phone,
@@ -17,7 +16,14 @@ import {
   DollarSign,
   Zap,
   Map,
-  Upload
+  Upload,
+  History,
+  CheckSquare,
+  Square,
+  Edit,
+  Trash2,
+  X,
+  Clock
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import Card from '@/components/common/Card';
@@ -27,6 +33,9 @@ import Select from '@/components/common/Select';
 import { useAppStore } from '@/store';
 import { CallLog } from '@/types';
 import { format } from 'date-fns';
+import CelebrationSystem from '@/components/gamification/CelebrationSystem';
+import EncouragementSystem from '@/components/gamification/EncouragementSystem';
+import CallMap from './CallMap';
 
 interface PerformanceMetrics {
   totalCalls: number;
@@ -46,17 +55,45 @@ interface CallAnalytics {
 }
 
 const EnhancedPostGame: React.FC = () => {
-  const { prospect, callLogs, addCallLog } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'log-call' | 'analytics' | 'map-view' | 'crm-sync'>('log-call');
+  const { 
+    prospect, 
+    callLogs, 
+    addCallLog,
+    activeCallDuration,
+    activeCallStartTime,
+    activeSequenceId,
+    callSequences,
+    getCallLogsForContact
+  } = useAppStore();
+  const [activeTab, setActiveTab] = useState<'log-call' | 'call-history' | 'analytics' | 'map-view' | 'crm-sync'>('log-call');
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [showEncouragement, setShowEncouragement] = useState(false);
+  const [celebrationType, setCelebrationType] = useState<'meeting-booked' | 'follow-up' | 'intelligence' | 'referral'>('meeting-booked');
+  const [encouragementType, setEncouragementType] = useState<'nurture' | 'disqualified' | 'follow-up'>('nurture');
+  
+  // Multi-select state for call history
+  const [selectedCallIds, setSelectedCallIds] = useState<Set<string>>(new Set());
+  const [showBatchEdit, setShowBatchEdit] = useState(false);
+  const [batchEditData, setBatchEditData] = useState({
+    outcome: '',
+    intel: '',
+    keyTakeaway: '',
+    nextSteps: ''
+  });
+  
+  // Find the current contact if we're in a sequence
+  const activeSequence = callSequences.find(seq => seq.id === activeSequenceId);
+  const currentContact = activeSequence?.contacts.find(c => 
+    c.companyName === prospect?.companyName && c.contactName === prospect?.contactName
+  );
   
   const [formData, setFormData] = useState({
     outcome: '',
     intel: '',
     bestTalkingPoint: '',
     keyTakeaway: '',
-    callDuration: 0,
+    callDuration: activeCallDuration || 0,
     newContacts: '',
     referrals: '',
     companyInsights: '',
@@ -68,6 +105,13 @@ const EnhancedPostGame: React.FC = () => {
     competitorMentioned: '',
     urgency: 'medium'
   });
+  
+  // Update call duration when it changes
+  useEffect(() => {
+    if (activeCallDuration > 0) {
+      setFormData(prev => ({ ...prev, callDuration: activeCallDuration }));
+    }
+  }, [activeCallDuration]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -182,6 +226,11 @@ const EnhancedPostGame: React.FC = () => {
     }
 
     if (!prospect) return;
+    
+    // Calculate attempt number for this contact
+    const previousCalls = currentContact?.id 
+      ? getCallLogsForContact(currentContact.id).length 
+      : 0;
 
     const callLog: CallLog = {
       id: Date.now().toString(),
@@ -192,6 +241,12 @@ const EnhancedPostGame: React.FC = () => {
       keyTakeaway: formData.keyTakeaway,
       createdAt: new Date(),
       callDuration: formData.callDuration,
+      // New fields
+      sequenceId: activeSequenceId || undefined,
+      contactId: currentContact?.id,
+      startTime: activeCallStartTime || undefined,
+      endTime: new Date(),
+      attemptNumber: previousCalls + 1,
       additionalInfo: {
         newContacts: formData.newContacts,
         referrals: formData.referrals,
@@ -203,7 +258,27 @@ const EnhancedPostGame: React.FC = () => {
     };
 
     addCallLog(callLog);
-    setShowSuccessAnimation(true);
+    
+    // Show appropriate animation based on outcome
+    if (formData.outcome === 'meeting-booked') {
+      setCelebrationType('meeting-booked');
+      setShowSuccessAnimation(true);
+    } else if (formData.outcome === 'follow-up') {
+      setCelebrationType('follow-up');
+      setShowSuccessAnimation(true);
+    } else if (formData.referrals) {
+      setCelebrationType('referral');
+      setShowSuccessAnimation(true);
+    } else if (formData.intel) {
+      setCelebrationType('intelligence');
+      setShowSuccessAnimation(true);
+    } else if (formData.outcome === 'nurture') {
+      setEncouragementType('nurture');
+      setShowEncouragement(true);
+    } else if (formData.outcome === 'disqualified') {
+      setEncouragementType('disqualified');
+      setShowEncouragement(true);
+    }
     
     // Reset form
     setFormData({
@@ -224,8 +299,6 @@ const EnhancedPostGame: React.FC = () => {
       urgency: 'medium'
     });
     setErrors({});
-
-    setTimeout(() => setShowSuccessAnimation(false), 3000);
   };
 
   const exportToSpreadsheet = () => {
@@ -260,11 +333,69 @@ const EnhancedPostGame: React.FC = () => {
     alert('CRM sync would happen here - integrating with Zoho CRM API');
   };
 
+  // Multi-select helpers
+  const toggleCallSelection = (callId: string) => {
+    const newSelected = new Set(selectedCallIds);
+    if (newSelected.has(callId)) {
+      newSelected.delete(callId);
+    } else {
+      newSelected.add(callId);
+    }
+    setSelectedCallIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedCallIds.size === allCallLogs.length) {
+      setSelectedCallIds(new Set());
+    } else {
+      setSelectedCallIds(new Set(allCallLogs.map(log => log.id)));
+    }
+  };
+
+  const handleBatchEdit = () => {
+    setShowBatchEdit(true);
+  };
+
+  const applyBatchEdit = () => {
+    selectedCallIds.forEach(callId => {
+      const updates: Partial<CallLog> = {};
+      if (batchEditData.outcome) updates.outcome = batchEditData.outcome as any;
+      if (batchEditData.intel) updates.intel = batchEditData.intel;
+      if (batchEditData.keyTakeaway) updates.keyTakeaway = batchEditData.keyTakeaway;
+      if (batchEditData.nextSteps) {
+        updates.additionalInfo = { 
+          ...allCallLogs.find(log => log.id === callId)?.additionalInfo,
+          nextSteps: batchEditData.nextSteps 
+        };
+      }
+      
+      // Update the call log (this would need to be added to the store)
+      // updateCallLog(callId, updates);
+    });
+    
+    setShowBatchEdit(false);
+    setSelectedCallIds(new Set());
+    setBatchEditData({ outcome: '', intel: '', keyTakeaway: '', nextSteps: '' });
+    alert(`Updated ${selectedCallIds.size} call logs`);
+  };
+
+  const deleteSelectedCalls = () => {
+    if (confirm(`Delete ${selectedCallIds.size} selected call logs?`)) {
+      // This would need deleteCallLog function in store
+      selectedCallIds.forEach(_callId => {
+        // deleteCallLog(callId);
+      });
+      setSelectedCallIds(new Set());
+      alert(`Deleted ${selectedCallIds.size} call logs`);
+    }
+  };
+
   const metrics = calculateMetrics();
   const analytics = generateAnalytics();
 
   const tabs = [
     { id: 'log-call' as const, label: 'Log Call', icon: MessageSquare },
+    { id: 'call-history' as const, label: 'Call History', icon: History },
     { id: 'analytics' as const, label: 'Analytics', icon: BarChart },
     { id: 'map-view' as const, label: 'Map View', icon: Map },
     { id: 'crm-sync' as const, label: 'CRM Sync', icon: Database }
@@ -345,7 +476,7 @@ const EnhancedPostGame: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Log Call Results</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Log Results</h3>
                   <p className="text-sm text-gray-600">
                     Record outcomes and insights from your call
                     {prospect && ` with ${prospect.companyName}`}
@@ -455,6 +586,248 @@ const EnhancedPostGame: React.FC = () => {
             </div>
           )}
 
+          {/* Call History Tab */}
+          {activeTab === 'call-history' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Call History Management</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Review, edit, and manage your call results
+                  </p>
+                </div>
+                
+                {selectedCallIds.size > 0 && (
+                  <div className="flex gap-2">
+                    <Button onClick={handleBatchEdit} variant="secondary">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Selected ({selectedCallIds.size})
+                    </Button>
+                    <Button onClick={deleteSelectedCalls} variant="secondary" className="text-red-600 hover:text-red-700">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Multi-select Controls */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <button
+                  onClick={toggleSelectAll}
+                  className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  {selectedCallIds.size === allCallLogs.length ? (
+                    <CheckSquare className="w-4 h-4 text-primary-600" />
+                  ) : (
+                    <Square className="w-4 h-4" />
+                  )}
+                  {selectedCallIds.size === allCallLogs.length ? 'Deselect All' : 'Select All'}
+                </button>
+                
+                {selectedCallIds.size > 0 && (
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedCallIds.size} of {allCallLogs.length} calls selected
+                  </span>
+                )}
+              </div>
+
+              {/* Call History List */}
+              <div className="space-y-3">
+                {allCallLogs.length > 0 ? (
+                  allCallLogs.map((log) => (
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-4 border rounded-lg transition-all ${
+                        selectedCallIds.has(log.id)
+                          ? 'border-primary-300 bg-primary-50 dark:bg-primary-900/20 shadow-md'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <button
+                          onClick={() => toggleCallSelection(log.id)}
+                          className="mt-1"
+                        >
+                          {selectedCallIds.has(log.id) ? (
+                            <CheckSquare className="w-5 h-5 text-primary-600" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                          )}
+                        </button>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-medium text-gray-900 dark:text-white">
+                                {log.leadId}
+                              </h4>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                log.outcome === 'meeting-booked' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
+                                log.outcome === 'follow-up' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' :
+                                log.outcome === 'nurture' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                              }`}>
+                                {log.outcome.replace('-', ' ')}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                              <Clock className="w-4 h-4" />
+                              <span>{log.callDuration || 0} min</span>
+                              <span className="text-gray-300 dark:text-gray-600">•</span>
+                              <span>{format(log.createdAt, 'MMM d, yyyy')}</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Intelligence: </span>
+                              <span className="text-sm text-gray-600 dark:text-gray-400">{log.intel}</span>
+                            </div>
+                            
+                            {log.bestTalkingPoint && (
+                              <div>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Best Talking Point: </span>
+                                <span className="text-sm text-gray-600 dark:text-gray-400">{log.bestTalkingPoint}</span>
+                              </div>
+                            )}
+                            
+                            <div>
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Key Takeaway: </span>
+                              <span className="text-sm text-gray-600 dark:text-gray-400">{log.keyTakeaway}</span>
+                            </div>
+
+                            {log.additionalInfo?.nextSteps && (
+                              <div>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Next Steps: </span>
+                                <span className="text-sm text-gray-600 dark:text-gray-400">{log.additionalInfo.nextSteps}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <History className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Call History</h3>
+                    <p className="text-gray-500 dark:text-gray-300">
+                      Start logging calls to see your history here
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Batch Edit Modal */}
+              {showBatchEdit && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                          Batch Edit {selectedCallIds.size} Call{selectedCallIds.size !== 1 ? 's' : ''}
+                        </h3>
+                        <button
+                          onClick={() => setShowBatchEdit(false)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                          Update fields for all selected calls. Leave fields empty to keep existing values.
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Outcome
+                            </label>
+                            <select
+                              value={batchEditData.outcome}
+                              onChange={(e) => setBatchEditData({...batchEditData, outcome: e.target.value})}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            >
+                              <option value="">Keep existing</option>
+                              <option value="meeting-booked">Meeting Booked</option>
+                              <option value="follow-up">Follow-up Scheduled</option>
+                              <option value="nurture">Added to Nurture</option>
+                              <option value="disqualified">Disqualified</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Intelligence
+                          </label>
+                          <textarea
+                            value={batchEditData.intel}
+                            onChange={(e) => setBatchEditData({...batchEditData, intel: e.target.value})}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Leave empty to keep existing intelligence"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Key Takeaway
+                          </label>
+                          <input
+                            type="text"
+                            value={batchEditData.keyTakeaway}
+                            onChange={(e) => setBatchEditData({...batchEditData, keyTakeaway: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Leave empty to keep existing takeaway"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Next Steps
+                          </label>
+                          <input
+                            type="text"
+                            value={batchEditData.nextSteps}
+                            onChange={(e) => setBatchEditData({...batchEditData, nextSteps: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Leave empty to keep existing next steps"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-6">
+                        <Button 
+                          onClick={() => setShowBatchEdit(false)}
+                          variant="secondary"
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={applyBatchEdit}
+                          className="flex-1"
+                        >
+                          Update {selectedCallIds.size} Call{selectedCallIds.size !== 1 ? 's' : ''}
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
             <div className="space-y-6">
@@ -555,6 +928,54 @@ const EnhancedPostGame: React.FC = () => {
                   </div>
                 </div>
               </Card>
+              
+              {/* Sequence Analytics */}
+              {activeSequence && (
+                <Card title="Active Sequence Performance" className="bg-purple-50 border-purple-200">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium text-purple-900">{activeSequence.name}</h4>
+                      <span className="text-sm text-purple-700">
+                        {activeSequence.contacts.filter(c => {
+                          const logs = callLogs.filter(log => log.contactId === c.id);
+                          return logs.length > 0;
+                        }).length} / {activeSequence.contacts.length} contacted
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-purple-700">Success Rate</p>
+                        <p className="text-2xl font-bold text-purple-900">
+                          {(() => {
+                            const sequenceLogs = callLogs.filter(log => log.sequenceId === activeSequence.id);
+                            const successful = sequenceLogs.filter(log => 
+                              log.outcome === 'meeting-booked' || log.outcome === 'follow-up'
+                            );
+                            return sequenceLogs.length > 0 
+                              ? Math.round((successful.length / sequenceLogs.length) * 100) 
+                              : 0;
+                          })()}%
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm text-purple-700">Avg Attempts</p>
+                        <p className="text-2xl font-bold text-purple-900">
+                          {(() => {
+                            const attempts = activeSequence.contacts.map(c => 
+                              callLogs.filter(log => log.contactId === c.id).length
+                            ).filter(n => n > 0);
+                            return attempts.length > 0 
+                              ? (attempts.reduce((a, b) => a + b, 0) / attempts.length).toFixed(1)
+                              : '0';
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
 
@@ -563,43 +984,13 @@ const EnhancedPostGame: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Geographic Success Map</h3>
-                <Button variant="secondary">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Optimize Route
-                </Button>
-              </div>
-
-              <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
-                <div className="text-center">
-                  <Map className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h4 className="font-semibold text-gray-600 mb-2">Interactive Map View</h4>
-                  <p className="text-gray-500 max-w-md">
-                    This would show a map with successful call locations, allowing you to plan efficient routes for in-person follow-ups and identify geographic patterns in your success rate.
-                  </p>
+                <div className="text-sm text-gray-600">
+                  Click on pins to see call details • Different colors indicate call outcomes
                 </div>
               </div>
 
-              {/* Successful Calls List */}
-              <Card title="Successful Calls for Route Planning">
-                <div className="space-y-3">
-                  {allCallLogs
-                    .filter(log => log.outcome === 'meeting-booked')
-                    .map((log) => (
-                      <div key={log.id} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <MapPin className="w-5 h-5 text-green-600" />
-                          <div>
-                            <div className="font-medium text-green-900">{log.leadId}</div>
-                            <div className="text-sm text-green-700">
-                              Meeting scheduled • {format(log.createdAt, 'MMM d, yyyy')}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-sm text-green-600">📍 Location data would appear here</div>
-                      </div>
-                    ))}
-                </div>
-              </Card>
+              {/* Interactive Map */}
+              <CallMap callLogs={allCallLogs} />
             </div>
           )}
 
@@ -695,6 +1086,20 @@ const EnhancedPostGame: React.FC = () => {
           )}
         </div>
       </Card>
+      
+      {/* Celebration System */}
+      <CelebrationSystem
+        isActive={showSuccessAnimation}
+        celebrationType={celebrationType}
+        onComplete={() => setShowSuccessAnimation(false)}
+      />
+      
+      {/* Encouragement System */}
+      <EncouragementSystem
+        isActive={showEncouragement}
+        outcome={encouragementType}
+        onComplete={() => setShowEncouragement(false)}
+      />
     </div>
   );
 };

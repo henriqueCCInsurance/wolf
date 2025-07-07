@@ -61,6 +61,8 @@ interface AppState {
   // UI preferences
   advancedMode: boolean;
   setAdvancedMode: (mode: boolean) => void;
+  salesWizardMode: boolean;
+  setSalesWizardMode: (mode: boolean) => void;
   
   // Profile data
   profile: ProfileData;
@@ -91,6 +93,7 @@ export const useAppStore = create<AppState>()(
       activeCallDuration: 0,
       currentModule: 'dashboard',
       advancedMode: false,
+      salesWizardMode: false,
       isGeneratingIntelligence: false,
       profile: {},
       
@@ -202,6 +205,7 @@ export const useAppStore = create<AppState>()(
       // UI actions
       setCurrentModule: (module) => set({ currentModule: module }),
       setAdvancedMode: (mode) => set({ advancedMode: mode }),
+      setSalesWizardMode: (mode) => set({ salesWizardMode: mode }),
       
       // Profile actions
       updateProfile: (updates) => {
@@ -241,6 +245,7 @@ export const useAppStore = create<AppState>()(
         callSequences: state.callSequences,
         activeSequenceId: state.activeSequenceId,
         advancedMode: state.advancedMode,
+        salesWizardMode: state.salesWizardMode,
         profile: state.profile
       })
     }

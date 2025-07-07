@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAppStore } from '@/store';
 
 type Theme = 'light' | 'dark';
+type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
   theme: Theme;
+  themeMode: ThemeMode;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  setThemeMode: (mode: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -23,7 +27,17 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const { profile } = useAppStore();
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    return profile.theme || 'system';
+  });
+  
   const [theme, setThemeState] = useState<Theme>(() => {
+    // If profile has a specific theme preference
+    if (profile.theme === 'light' || profile.theme === 'dark') {
+      return profile.theme;
+    }
+    
     // Check for saved theme preference or default to light
     const savedTheme = localStorage.getItem('wolf-den-theme') as Theme;
     if (savedTheme) {
@@ -52,19 +66,28 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, [theme]);
 
   useEffect(() => {
+    // Listen for profile theme changes
+    if (profile.theme) {
+      setThemeModeState(profile.theme);
+      if (profile.theme === 'light' || profile.theme === 'dark') {
+        setThemeState(profile.theme);
+      }
+    }
+  }, [profile.theme]);
+
+  useEffect(() => {
     // Listen for system theme changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
-      // Only update if user hasn't set a manual preference
-      const savedTheme = localStorage.getItem('wolf-den-theme');
-      if (!savedTheme) {
+      // Only update if theme mode is set to system
+      if (themeMode === 'system') {
         setThemeState(e.matches ? 'dark' : 'light');
       }
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  }, [themeMode]);
 
   const toggleTheme = () => {
     setThemeState(prev => prev === 'light' ? 'dark' : 'light');
@@ -73,11 +96,24 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
   };
+  
+  const setThemeMode = (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    if (mode === 'light' || mode === 'dark') {
+      setThemeState(mode);
+    } else if (mode === 'system') {
+      // Update to system preference
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setThemeState(isDark ? 'dark' : 'light');
+    }
+  };
 
   const value: ThemeContextType = {
     theme,
+    themeMode,
     toggleTheme,
-    setTheme
+    setTheme,
+    setThemeMode
   };
 
   return (

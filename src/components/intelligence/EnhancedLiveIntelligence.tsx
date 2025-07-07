@@ -100,8 +100,8 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
   if (!industryData) {
     return (
       <div className={`bg-white rounded-lg shadow-md border border-gray-200 p-6 ${className}`}>
-        <div className="text-center text-gray-500">
-          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <div className="text-center text-gray-500 dark:text-gray-300">
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
           <p>Industry intelligence not available for this sector.</p>
         </div>
       </div>
@@ -125,7 +125,7 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
           <h3 className="text-lg font-semibold text-gray-900 mb-1">
             Enhanced Industry Intelligence
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Real-time insights for {industryData.name} sector conversations
           </p>
         </div>
@@ -203,7 +203,7 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
             {loadingLive ? (
               <div className="text-center py-8">
                 <RefreshCw className="w-8 h-8 mx-auto mb-4 text-gray-400 animate-spin" />
-                <p className="text-gray-500">Loading live industry intelligence...</p>
+                <p className="text-gray-500 dark:text-gray-300">Loading live industry intelligence...</p>
               </div>
             ) : liveResults.length > 0 ? (
               <>
@@ -233,7 +233,7 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-xs text-gray-500">Live Source</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-300">Live Source</span>
                       </div>
                       <a 
                         href={result.url}
@@ -265,9 +265,9 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
               </>
             ) : (
               <div className="text-center py-8">
-                <Globe className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500 mb-2">No live intelligence available</p>
-                <p className="text-sm text-gray-400">Try refreshing or check your search configuration</p>
+                <Globe className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                <p className="text-gray-500 dark:text-gray-300 mb-2">No live intelligence available</p>
+                <p className="text-sm text-gray-400 dark:text-gray-300">Try refreshing or check your search configuration</p>
               </div>
             )}
           </div>
@@ -298,7 +298,7 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
                   {stat.talkingPoint}
                 </p>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
                   <span>Source: {stat.source}</span>
                   <a 
                     href={getSourceUrl(stat.source)}
@@ -379,7 +379,7 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-medium text-gray-900 mb-1">Ready to Use This Intelligence?</h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               {activeTab === 'live' ? 
                 `${liveResults.length} live insights ready for your ${industryData.name} conversations` :
                 `These insights are optimized for ${industryData.name} conversations`
@@ -396,7 +396,7 @@ const EnhancedLiveIntelligence: React.FC<EnhancedLiveIntelligenceProps> = ({
               </button>
             )}
             <button className="bg-primary-300 hover:bg-primary-400 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-              Add to Call Guide
+              Add to Guide
             </button>
           </div>
         </div>

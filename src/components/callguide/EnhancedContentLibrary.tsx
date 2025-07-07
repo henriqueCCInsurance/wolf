@@ -45,9 +45,9 @@ const EnhancedContentLibrary: React.FC = () => {
     return (
       <Card title="Enhanced Content Library" className="mb-6">
         <div className="text-center py-12">
-          <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Complete Lead Acquisition First</h3>
-          <p className="text-gray-500">
+          <Brain className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Complete Lead Acquisition First</h3>
+          <p className="text-gray-500 dark:text-gray-300">
             Access personalized conversation strategies tailored to your prospect's persona
           </p>
         </div>
@@ -196,8 +196,8 @@ const EnhancedContentLibrary: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Icon className={`w-5 h-5 text-${category.color}-600`} />
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">{category.label}</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{category.label}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       {categoryContent.length} available • {selectedInCategory} selected
                     </p>
                   </div>
@@ -210,9 +210,9 @@ const EnhancedContentLibrary: React.FC = () => {
                     </span>
                   )}
                   {isExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
+                    <ChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                    <ChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   )}
                 </div>
               </button>
@@ -229,7 +229,7 @@ const EnhancedContentLibrary: React.FC = () => {
                   >
                     <div className="p-4 bg-white border-t border-gray-100">
                       {categoryContent.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-300">
                           <Filter className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                           <p>No content found matching your search</p>
                         </div>

@@ -2,13 +2,122 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/wolf-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The W.O.L.F. Den - Campbell & Co. Sales Assistant</title>
+    <title>W.O.L.F - Campbell & Co. Sales Assistant</title>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Professional loading screen -->
+      <div id="app-loader" style="
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        z-index: 9999;
+      ">
+        <div style="text-align: center;">
+          <!-- Professional Logo -->
+          <div style="
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, #a5cf4c 0%, #7aa030 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(165, 207, 76, 0.3);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          ">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 5L25 15L35 16L27.5 23L30 33L20 28L10 33L12.5 23L5 16L15 15L20 5Z" fill="white" opacity="0.9"/>
+            </svg>
+          </div>
+          
+          <!-- App Name -->
+          <h1 style="
+            font-family: 'Lato', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 8px;
+            letter-spacing: -0.5px;
+          ">W.O.L.F</h1>
+          
+          <!-- Tagline -->
+          <p style="
+            font-family: 'Lato', sans-serif;
+            font-size: 14px;
+            color: #64748b;
+            margin: 0 0 32px;
+          ">Sales Intelligence Platform</p>
+          
+          <!-- Loading Bar -->
+          <div style="
+            width: 200px;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 0 auto;
+          ">
+            <div style="
+              height: 100%;
+              background: linear-gradient(90deg, #a5cf4c 0%, #7aa030 100%);
+              border-radius: 2px;
+              animation: loading 1.5s ease-in-out infinite;
+            "></div>
+          </div>
+          
+          <!-- Loading Text -->
+          <p style="
+            font-family: 'Lato', sans-serif;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 16px;
+            animation: fade 1.5s ease-in-out infinite;
+          ">Initializing your sales command center...</p>
+        </div>
+      </div>
+      
+      <style>
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        
+        @keyframes loading {
+          0% { width: 0%; transform: translateX(0); }
+          50% { width: 100%; transform: translateX(0); }
+          100% { width: 100%; transform: translateX(100%); }
+        }
+        
+        @keyframes fade {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+          #app-loader {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+          }
+          #app-loader h1 {
+            color: #f1f5f9 !important;
+          }
+          #app-loader p {
+            color: #64748b !important;
+          }
+          #app-loader > div > div:last-child > div:first-child {
+            background: #334155 !important;
+          }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

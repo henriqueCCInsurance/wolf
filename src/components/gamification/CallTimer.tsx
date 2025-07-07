@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, Clock, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAppStore } from '@/store';
 
 interface CallTimerProps {
   persona: 'cost-conscious-employer' | 'benefits-optimizer' | 'roi-focused-executive' | 'gatekeeper';
   onTimeUpdate?: (seconds: number) => void;
   onCallEnd?: (duration: number) => void;
+  isCallActive?: boolean;
 }
 
-const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd }) => {
+const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd, isCallActive = false }) => {
+  const { setActiveCallStartTime, setActiveCallDuration } = useAppStore();
   const [isRunning, setIsRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
@@ -23,6 +25,30 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd 
   };
 
   const target = targetDurations[persona];
+
+  // Sync timer with call state
+  useEffect(() => {
+    if (isCallActive && !isRunning) {
+      setIsRunning(true);
+      setHasStarted(true);
+      setActiveCallStartTime(new Date());
+    } else if (!isCallActive && isRunning) {
+      setIsRunning(false);
+      // Store the final duration when call ends
+      const durationInMinutes = Math.round(seconds / 60);
+      setActiveCallDuration(durationInMinutes);
+      onCallEnd?.(durationInMinutes);
+    }
+  }, [isCallActive, isRunning, seconds, setActiveCallStartTime, setActiveCallDuration, onCallEnd]);
+
+  // Reset timer when call ends
+  useEffect(() => {
+    if (!isCallActive && !isRunning && hasStarted) {
+      setSeconds(0);
+      setHasStarted(false);
+      setActiveCallStartTime(null);
+    }
+  }, [isCallActive, isRunning, hasStarted, setActiveCallStartTime]);
 
   useEffect(() => {
     if (isRunning) {
@@ -85,26 +111,6 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd 
     return Math.min((seconds / target.optimal) * 100, 100);
   };
 
-  const handleStart = () => {
-    setIsRunning(true);
-    setHasStarted(true);
-  };
-
-  const handlePause = () => {
-    setIsRunning(false);
-  };
-
-  const handleStop = () => {
-    setIsRunning(false);
-    onCallEnd?.(seconds);
-    // Don't reset immediately to allow user to see final time
-  };
-
-  const handleReset = () => {
-    setIsRunning(false);
-    setSeconds(0);
-    setHasStarted(false);
-  };
 
   const getPersonaGuidance = () => {
     switch (persona) {
@@ -122,23 +128,18 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border-2 border-gray-200 p-6 max-w-md mx-auto">
-      {/* Timer Display */}
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center mb-2">
-          <Clock className="w-6 h-6 text-gray-600 mr-2" />
-          <h3 className="text-lg font-semibold text-gray-900">Call Timer</h3>
-        </div>
-        
+    <div className="space-y-4">
+      {/* Timer Display - Clean and Prominent */}
+      <div className="text-center">
         <motion.div
-          animate={{ scale: isRunning ? [1, 1.05, 1] : 1 }}
+          animate={{ scale: isRunning ? [1, 1.02, 1] : 1 }}
           transition={{ duration: 1, repeat: isRunning ? Infinity : 0 }}
-          className="text-6xl font-mono font-bold text-gray-900 mb-2"
+          className="text-7xl font-mono font-bold text-gray-900 dark:text-white mb-3"
         >
           {formatTime(seconds)}
         </motion.div>
         
-        <div className={`inline-flex items-center px-3 py-1 rounded-full border text-sm font-medium ${getStatusColor()}`}>
+        <div className={`inline-flex items-center px-4 py-2 rounded-full border-2 text-sm font-medium ${getStatusColor()}`}>
           <div className={`w-2 h-2 rounded-full mr-2 ${
             isRunning ? 'animate-pulse' : ''
           } ${
@@ -151,15 +152,10 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd 
       </div>
 
       {/* Progress Bar */}
-      <div className="mb-6">
-        <div className="flex justify-between text-xs text-gray-600 mb-1">
-          <span>Start</span>
-          <span>Optimal ({Math.floor(target.optimal / 60)}min)</span>
-          <span>Max ({Math.floor(target.max / 60)}min)</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+      <div>
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
           <motion.div
-            className={`h-2 rounded-full transition-colors duration-300 ${
+            className={`h-3 rounded-full transition-colors duration-300 ${
               getTimeStatus() === 'optimal' ? 'bg-green-500' :
               getTimeStatus() === 'getting-long' ? 'bg-yellow-500' :
               getTimeStatus() === 'too-long' ? 'bg-red-500' : 'bg-blue-500'
@@ -169,62 +165,18 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd 
             transition={{ duration: 0.3 }}
           />
         </div>
-      </div>
-
-      {/* Controls */}
-      <div className="flex justify-center space-x-3 mb-6">
-        {!isRunning ? (
-          <button
-            onClick={handleStart}
-            className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <Play className="w-4 h-4" />
-            <span>{hasStarted ? 'Resume' : 'Start Call'}</span>
-          </button>
-        ) : (
-          <button
-            onClick={handlePause}
-            className="flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <Pause className="w-4 h-4" />
-            <span>Pause</span>
-          </button>
-        )}
-        
-        <button
-          onClick={handleStop}
-          disabled={!hasStarted}
-          className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          <Square className="w-4 h-4" />
-          <span>End Call</span>
-        </button>
-        
-        <button
-          onClick={handleReset}
-          disabled={isRunning}
-          className="flex items-center space-x-2 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          Reset
-        </button>
-      </div>
-
-      {/* Guidance */}
-      <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <Target className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <h4 className="font-medium text-primary-900 mb-1">
-              {persona.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Timing
-            </h4>
-            <p className="text-sm text-primary-800">
-              {getPersonaGuidance()}
-            </p>
-            <div className="mt-2 text-xs text-primary-700">
-              Target: {Math.floor(target.min / 60)}-{Math.floor(target.optimal / 60)}-{Math.floor(target.max / 60)} minutes
-            </div>
-          </div>
+        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <span>{formatTime(0)}</span>
+          <span className="font-medium">Optimal: {Math.floor(target.optimal / 60)}min</span>
+          <span>{formatTime(target.max)}</span>
         </div>
+      </div>
+
+      {/* Timing Guidance */}
+      <div className="text-center">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          {getPersonaGuidance()}
+        </p>
       </div>
     </div>
   );

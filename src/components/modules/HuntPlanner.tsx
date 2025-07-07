@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Target, Brain, FileText, Settings } from 'lucide-react';
+import { Search, Target, Brain, FileText } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -22,7 +22,8 @@ const HuntPlanner: React.FC = () => {
     setIsGeneratingIntelligence,
     dynamicIntelligence,
     setDynamicIntelligence,
-    setCurrentModule 
+    setCurrentModule,
+    advancedMode
   } = useAppStore();
 
   const [formData, setFormData] = useState({
@@ -33,7 +34,6 @@ const HuntPlanner: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [advancedMode, setAdvancedMode] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -104,21 +104,6 @@ const HuntPlanner: React.FC = () => {
         <p className="text-lg text-gray-600">
           Build the perfect call strategy with tactical intelligence
         </p>
-        {/* Mode Toggle */}
-        <div className="mt-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setAdvancedMode(!advancedMode)}
-            className="text-sm flex items-center space-x-2"
-          >
-            <Settings className="w-4 h-4" />
-            <span>{advancedMode ? 'Quick Mode' : 'Advanced Mode'}</span>
-          </Button>
-          <p className="text-xs text-gray-500 mt-1">
-            {advancedMode ? 'Show essential features only' : 'Access all features and detailed insights'}
-          </p>
-        </div>
       </div>
 
       {/* Step 1: Lead Acquisition */}
@@ -354,7 +339,7 @@ const HuntPlanner: React.FC = () => {
         </Card>
       )}
 
-      {/* Generate Call Guide */}
+      {/* Generate Guide */}
       {prospect && selectedContent.length > 0 && (
         <div className="text-center">
           <Button 
@@ -363,7 +348,7 @@ const HuntPlanner: React.FC = () => {
             className="text-lg px-8 py-3"
           >
             <FileText className="w-5 h-5 mr-2" />
-            Generate Call Guide
+            Generate Guide
           </Button>
         </div>
       )}

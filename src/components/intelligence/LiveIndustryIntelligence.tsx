@@ -60,9 +60,9 @@ const LiveIndustryIntelligence: React.FC<LiveIndustryIntelligenceProps> = ({
 
   if (!industryData) {
     return (
-      <div className={`bg-white rounded-lg shadow-md border border-gray-200 p-6 ${className}`}>
-        <div className="text-center text-gray-500">
-          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+        <div className="text-center text-gray-500 dark:text-gray-300">
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
           <p>Industry intelligence not available for this sector.</p>
         </div>
       </div>
@@ -76,14 +76,14 @@ const LiveIndustryIntelligence: React.FC<LiveIndustryIntelligenceProps> = ({
   ];
 
   return (
-    <div className={`bg-white rounded-lg shadow-md border border-gray-200 p-6 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
             Live Industry Intelligence
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Real-time insights for {industryData.name} sector conversations
           </p>
         </div>
@@ -164,7 +164,7 @@ const LiveIndustryIntelligence: React.FC<LiveIndustryIntelligenceProps> = ({
                   {stat.talkingPoint}
                 </p>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
                   <span>Source: {stat.source}</span>
                   <a 
                     href={getSourceUrl(stat.source)}
@@ -245,10 +245,10 @@ const LiveIndustryIntelligence: React.FC<LiveIndustryIntelligenceProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-medium text-gray-900 mb-1">Ready to Use This Intelligence?</h4>
-            <p className="text-sm text-gray-600">These insights are optimized for {industryData.name} conversations</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">These insights are optimized for {industryData.name} conversations</p>
           </div>
           <button className="bg-primary-300 hover:bg-primary-400 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            Add to Call Guide
+            Add to Guide
           </button>
         </div>
       </div>

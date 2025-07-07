@@ -111,18 +111,18 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
   const totalRecords = callLogs.length + battleCards.length;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
               <Database className="w-6 h-6 text-primary-500" />
-              <h2 className="text-2xl font-bold text-gray-800">Data Management</h2>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Data Management</h2>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -138,15 +138,15 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-primary-500">{callLogs.length}</div>
-                  <div className="text-sm text-gray-600">Call Logs</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Call Logs</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-primary-500">{battleCards.length}</div>
-                  <div className="text-sm text-gray-600">Battle Cards</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Battle Cards</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-primary-500">{totalRecords}</div>
-                  <div className="text-sm text-gray-600">Total Records</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Total Records</div>
                 </div>
               </div>
             </div>
@@ -161,10 +161,10 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
               </h3>
               
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div>
-                    <div className="font-medium">Complete Backup (JSON)</div>
-                    <div className="text-sm text-gray-600">Full data backup for importing later</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Complete Backup (JSON)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">Full data backup for importing later</div>
                   </div>
                   <Button
                     onClick={handleExportJSON}
@@ -177,10 +177,10 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div>
-                    <div className="font-medium">Call Logs (CSV)</div>
-                    <div className="text-sm text-gray-600">Detailed call history for analysis</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Call Logs (CSV)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">Detailed call history for analysis</div>
                   </div>
                   <Button
                     onClick={() => handleExportCSV('calls')}
@@ -192,10 +192,10 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div>
-                    <div className="font-medium">Performance Metrics (CSV)</div>
-                    <div className="text-sm text-gray-600">Success rates and analytics</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Performance Metrics (CSV)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">Success rates and analytics</div>
                   </div>
                   <Button
                     onClick={() => handleExportCSV('performance')}
@@ -207,10 +207,10 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div>
-                    <div className="font-medium">Battle Cards (CSV)</div>
-                    <div className="text-sm text-gray-600">Generated battle card history</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Battle Cards (CSV)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">Generated battle card history</div>
                   </div>
                   <Button
                     onClick={() => handleExportCSV('battlecards')}
@@ -224,7 +224,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
 
                 <div className="flex items-center justify-between p-3 bg-primary-50 rounded-lg border border-primary-200">
                   <div>
-                    <div className="font-medium text-primary-700">Complete Dataset (All CSV)</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100 text-primary-700">Complete Dataset (All CSV)</div>
                     <div className="text-sm text-primary-600">All data in separate CSV files</div>
                   </div>
                   <Button
@@ -250,7 +250,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
               
               <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
                 <div>
-                  <div className="font-medium text-purple-700">Web Search Settings</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100 text-purple-700">Web Search Settings</div>
                   <div className="text-sm text-purple-600">Configure real-time industry intelligence sources</div>
                 </div>
                 <Button
@@ -277,7 +277,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center mb-2">
                     <AlertCircle className="w-5 h-5 text-blue-500 mr-2" />
-                    <span className="font-medium text-blue-700">Import Guidelines</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100 text-blue-700">Import Guidelines</span>
                   </div>
                   <ul className="text-sm text-blue-600 space-y-1">
                     <li>• Only JSON backup files are supported for import</li>
@@ -341,7 +341,7 @@ const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => {
                 
                 {importResult.errors && importResult.errors.length > 0 && (
                   <div className="mt-3">
-                    <h4 className="font-medium text-red-700 mb-2">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100 text-red-700 mb-2">
                       {importResult.success ? 'Warnings:' : 'Errors:'}
                     </h4>
                     <ul className="text-sm text-red-600 space-y-1">

@@ -56,35 +56,55 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
     
     Papa.parse(file, {
       header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim(), // Clean headers
       complete: (results) => {
-        if (results.errors.length > 0) {
-          setErrors(results.errors.map(err => err.message));
+        console.log('CSV Parse Results:', results);
+        
+        // Filter out non-critical errors
+        const criticalErrors = results.errors.filter(err => 
+          err.type === 'Delimiter' || err.type === 'Quotes'
+        );
+        
+        if (criticalErrors.length > 0) {
+          setErrors(criticalErrors.map(err => `Row ${(err.row || 0) + 1}: ${err.message}`));
           setIsProcessing(false);
           return;
         }
 
-        setCsvData(results.data as CSVRow[]);
+        const validData = (results.data as CSVRow[]).filter(row => 
+          Object.values(row).some(value => value && value.trim())
+        );
+
+        if (validData.length === 0) {
+          setErrors(['No valid data found in CSV file. Please check the file format.']);
+          setIsProcessing(false);
+          return;
+        }
+
+        setCsvData(validData);
         setStep('mapping');
         setIsProcessing(false);
         
         // Auto-map common column names
-        const headers = Object.keys(results.data[0] as CSVRow);
+        const headers = Object.keys(validData[0]);
         const autoMappings: Record<string, string> = {};
         
         headers.forEach(header => {
-          const lowerHeader = header.toLowerCase();
-          if (lowerHeader.includes('company')) autoMappings.companyName = header;
-          if (lowerHeader.includes('contact') || lowerHeader.includes('name')) autoMappings.contactName = header;
-          if (lowerHeader.includes('industry')) autoMappings.industry = header;
-          if (lowerHeader.includes('email')) autoMappings.email = header;
-          if (lowerHeader.includes('phone')) autoMappings.phone = header;
-          if (lowerHeader.includes('address')) autoMappings.address = header;
+          const lowerHeader = header.toLowerCase().trim();
+          if (lowerHeader.includes('company') && !autoMappings.companyName) autoMappings.companyName = header;
+          if ((lowerHeader.includes('contact') || lowerHeader.includes('name')) && !lowerHeader.includes('company') && !autoMappings.contactName) autoMappings.contactName = header;
+          if (lowerHeader.includes('industry') && !autoMappings.industry) autoMappings.industry = header;
+          if (lowerHeader.includes('email') && !autoMappings.email) autoMappings.email = header;
+          if (lowerHeader.includes('phone') && !autoMappings.phone) autoMappings.phone = header;
+          if (lowerHeader.includes('address') && !autoMappings.address) autoMappings.address = header;
         });
         
         setMappings(autoMappings);
       },
       error: (error) => {
-        setErrors([error.message]);
+        console.error('CSV Parse Error:', error);
+        setErrors([`CSV Parse Error: ${error.message}`]);
         setIsProcessing(false);
       }
     });
@@ -114,19 +134,36 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
   };
 
   const processContacts = (): Contact[] => {
-    return csvData.slice(0, 100).map((row, index) => { // Limit to 100 contacts
+    let contactsWithoutPhone = 0;
+    
+    const contacts = csvData.slice(0, 100).map((row, index) => { // Limit to 100 contacts
+      const phone = mappings.phone ? row[mappings.phone]?.trim() : undefined;
+      
+      // Check for missing or invalid phone
+      if (!phone || phone === '') {
+        contactsWithoutPhone++;
+      }
+      
       return {
         id: `import-${Date.now()}-${index}`,
-        companyName: mappings.companyName ? row[mappings.companyName] || '' : '',
-        contactName: mappings.contactName ? row[mappings.contactName] || '' : '',
-        industry: mappings.industry ? row[mappings.industry] || '' : '',
-        email: mappings.email ? row[mappings.email] : undefined,
-        phone: mappings.phone ? row[mappings.phone] : undefined,
-        address: mappings.address ? row[mappings.address] : undefined,
+        companyName: mappings.companyName ? row[mappings.companyName]?.trim() || '' : '',
+        contactName: mappings.contactName ? row[mappings.contactName]?.trim() || '' : '',
+        industry: mappings.industry ? row[mappings.industry]?.trim() || '' : '',
+        email: mappings.email ? row[mappings.email]?.trim() : undefined,
+        phone: phone,
+        address: mappings.address ? row[mappings.address]?.trim() : undefined,
         source: 'csv' as const,
         status: 'pending' as const,
       };
     }).filter(contact => contact.companyName && contact.contactName);
+
+    // Show phone number warnings
+    if (contactsWithoutPhone > 0) {
+      const warningMessage = `⚠️ Warning: ${contactsWithoutPhone} contacts imported without phone numbers. Manual enrichment may be needed for effective calling.`;
+      setErrors([...errors, warningMessage]);
+    }
+
+    return contacts;
   };
 
   const handleImport = () => {
@@ -197,7 +234,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Import Contacts</h2>
-              <p className="text-sm text-gray-600">Upload CSV files from Apollo, ZoomInfo, or other platforms</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Upload CSV files from Apollo, ZoomInfo, or other platforms</p>
             </div>
             <button
               onClick={onClose}
@@ -252,7 +289,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                   </Button>
                   
                   {file && (
-                    <div className="mt-4 text-sm text-gray-600">
+                    <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
                       Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)
                     </div>
                   )}
@@ -262,13 +299,13 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-2">Apollo.io Export</h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Go to your saved contacts → Export → CSV format
                     </p>
                   </div>
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-2">ZoomInfo Export</h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Select contacts → Export → Download CSV
                     </p>
                   </div>
@@ -305,7 +342,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Map CSV Columns</h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
                     Match your CSV columns to the required fields. Found {csvData.length} rows.
                   </p>
                 </div>
@@ -375,7 +412,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Preview Contacts</h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
                     Review the contacts to be imported (showing first 10 of {processContacts().length})
                   </p>
                 </div>
@@ -429,7 +466,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
               <div className="text-center py-12">
                 <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Import Complete!</h3>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-300">
                   Successfully imported {processContacts().length} contacts
                 </p>
               </div>

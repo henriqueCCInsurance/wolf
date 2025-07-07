@@ -11,14 +11,14 @@ import { format } from 'date-fns';
 import { exportCallLogsToCSV, exportPerformanceMetricsToCSV, exportCompleteDataset, generateCallInsights } from '@/utils/exportUtils';
 
 const PostGame: React.FC = () => {
-  const { prospect, callLogs, addCallLog, battleCards } = useAppStore();
+  const { prospect, callLogs, addCallLog, battleCards, activeCallDuration } = useAppStore();
   
   const [formData, setFormData] = useState({
     outcome: '',
     intel: '',
     bestTalkingPoint: '',
     keyTakeaway: '',
-    callDuration: 0,
+    callDuration: activeCallDuration || 0,
     newContacts: '',
     referrals: '',
     companyInsights: '',
@@ -36,6 +36,13 @@ const PostGame: React.FC = () => {
   useEffect(() => {
     setFilteredCallLogs(callLogs);
   }, [callLogs]);
+
+  // Update call duration when it changes
+  useEffect(() => {
+    if (activeCallDuration > 0) {
+      setFormData(prev => ({ ...prev, callDuration: activeCallDuration }));
+    }
+  }, [activeCallDuration]);
 
   const outcomeOptions = [
     { value: 'meeting-booked', label: 'Meeting Booked 🎯' },
@@ -353,7 +360,7 @@ const PostGame: React.FC = () => {
         ) : (
           <div className="text-center py-8 text-gray-500">
             <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p>No active prospect. Complete the Hunt Planner first.</p>
+            <p>No active prospect. Complete the Planner first.</p>
           </div>
         )}
       </Card>

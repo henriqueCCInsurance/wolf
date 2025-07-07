@@ -14,10 +14,10 @@ const HelpCenter: React.FC = () => {
   const tutorials = [
     {
       id: 'getting-started',
-      title: 'Getting Started with W.O.L.F. Den',
+      title: 'Getting Started with W.O.L.F',
       duration: '5 min',
       category: 'basics',
-      description: 'Learn the fundamentals of using the W.O.L.F. Den sales enablement platform.',
+      description: 'Learn the fundamentals of using the W.O.L.F sales enablement platform.',
       steps: [
         'Understanding the Dashboard',
         'Setting up your first prospect',
@@ -26,8 +26,8 @@ const HelpCenter: React.FC = () => {
       ]
     },
     {
-      id: 'hunt-planner',
-      title: 'Mastering the Hunt Planner',
+      id: 'call-planner',
+      title: 'Mastering the Planner',
       duration: '8 min',
       category: 'modules',
       description: 'Deep dive into prospect research and preparation strategies.',
@@ -53,7 +53,7 @@ const HelpCenter: React.FC = () => {
     },
     {
       id: 'live-call',
-      title: 'Live Call Assistance',
+      title: 'Call Assistance',
       duration: '7 min',
       category: 'modules',
       description: 'Real-time support during your sales conversations.',
@@ -81,7 +81,7 @@ const HelpCenter: React.FC = () => {
   
   const faqs = [
     {
-      question: 'What is the W.O.L.F. methodology?',
+      question: 'What is the W.O.L.F methodology?',
       answer: 'W.O.L.F. stands for Wisdom, Opportunity, Leadership, and Focus. It\'s our proven framework for sales excellence that helps you understand your prospect (Wisdom), identify their needs (Opportunity), guide the conversation (Leadership), and close with confidence (Focus).'
     },
     {
@@ -90,7 +90,7 @@ const HelpCenter: React.FC = () => {
     },
     {
       question: 'Can I customize the content library?',
-      answer: 'Yes! You can add your own talking points, objection handlers, and thought leadership content. Use the Content Library feature in the Hunt Planner to personalize your sales approach.'
+      answer: 'Yes! You can add your own talking points, objection handlers, and thought leadership content. Use the Content Library feature in the Planner to personalize your sales approach.'
     },
     {
       question: 'How does the live intelligence feature work?',
@@ -98,11 +98,11 @@ const HelpCenter: React.FC = () => {
     },
     {
       question: 'What\'s the best way to prepare for a cold call?',
-      answer: 'Start with the Hunt Planner to research your prospect, create a Battle Card with key talking points, review the Live Call Assistance features, and have your objection handlers ready. The more prepared you are, the more confident you\'ll sound.'
+      answer: 'Start with the Planner to research your prospect, create a Battle Card with key talking points, review the Call Assistance features, and have your objection handlers ready. The more prepared you are, the more confident you\'ll sound.'
     },
     {
       question: 'How can I track my performance over time?',
-      answer: 'Use the Dashboard to monitor your call volume, success rates, and trends. The Post-Game Analysis module helps you log detailed outcomes and identify patterns in your sales conversations.'
+      answer: 'Use the Dashboard to monitor your call volume, success rates, and trends. The Results Analysis module helps you log detailed outcomes and identify patterns in your sales conversations.'
     }
   ];
   
@@ -110,7 +110,7 @@ const HelpCenter: React.FC = () => {
     {
       icon: Target,
       title: 'Research First, Call Second',
-      description: 'Spend 5-10 minutes in the Hunt Planner before each call. Knowledge builds confidence.'
+      description: 'Spend 5-10 minutes in the Planner before each call. Knowledge builds confidence.'
     },
     {
       icon: Users,
@@ -125,7 +125,7 @@ const HelpCenter: React.FC = () => {
     {
       icon: MessageCircle,
       title: 'Practice Active Listening',
-      description: 'Use the Live Call Assistance to guide conversations, but always prioritize listening to your prospect.'
+      description: 'Use the Call Assistance to guide conversations, but always prioritize listening to your prospect.'
     }
   ];
   
@@ -145,7 +145,7 @@ const HelpCenter: React.FC = () => {
       <div className="text-center max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Help Center</h1>
         <p className="text-gray-600 dark:text-gray-300">
-          Everything you need to master the W.O.L.F. Den sales enablement platform
+          Everything you need to master the W.O.L.F sales enablement platform
         </p>
       </div>
       
@@ -320,7 +320,7 @@ const HelpCenter: React.FC = () => {
           <HelpCircle className="mx-auto text-primary-600 dark:text-primary-400 mb-3" size={48} />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Need More Help?</h3>
           <p className="text-gray-600 dark:text-gray-300 mb-4">
-            Our support team is here to help you succeed with the W.O.L.F. Den platform.
+            Our support team is here to help you succeed with the W.O.L.F platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button variant="primary">

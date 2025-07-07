@@ -1,12 +1,10 @@
 import React from 'react';
-import { Download, Printer, ArrowLeft, FileText, Target, TrendingUp } from 'lucide-react';
+import { Download, Printer, ArrowLeft, FileText, Target, TrendingUp, Phone } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
+import CollapsibleSection from '@/components/common/CollapsibleSection';
 import EnhancedContentLibrary from '@/components/callguide/EnhancedContentLibrary';
-import CallTimer from '@/components/gamification/CallTimer';
-import SuccessButton from '@/components/gamification/SuccessButton';
 import LiveIndustryIntelligence from '@/components/intelligence/LiveIndustryIntelligence';
-import CallGuideHelper from '@/components/common/CallGuideHelper';
 import { useAppStore } from '@/store';
 import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
@@ -15,30 +13,16 @@ import { getClosingsByPersonaAndType, getSuccessRateCategory } from '@/data/stra
 
 const CallGuide: React.FC = () => {
   const { prospect, selectedContent, setCurrentModule, addBattleCard } = useAppStore();
-  const [userPoints, setUserPoints] = React.useState(0);
-
-  const handleCallSuccess = (_type: 'meeting-booked' | 'follow-up' | 'intelligence' | 'referral', points: number) => {
-    setUserPoints(prev => prev + points);
-    // Here you could also log the success to analytics or CRM
-  };
-
-  const handleTimeUpdate = (_seconds: number) => {
-    // Time tracking handled internally by CallTimer component
-  };
-
-  const handleCallEnd = (_duration: number) => {
-    // Duration tracking handled internally by CallTimer component
-  };
 
   if (!prospect) {
     return (
       <div className="text-center py-12">
         <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Lead Selected</h2>
-        <p className="text-gray-600 mb-6">Complete the Hunt Planner first to generate your Call Guide</p>
-        <Button onClick={() => setCurrentModule('hunt-planner')}>
+        <p className="text-gray-600 mb-6">Complete the Planner first to generate your Guide</p>
+        <Button onClick={() => setCurrentModule('call-planner')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Hunt Planner
+          Back to Planner
         </Button>
       </div>
     );
@@ -72,15 +56,19 @@ const CallGuide: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Call Guide Generator</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Guide Generator</h1>
           <p className="text-lg text-gray-600">
-            Your comprehensive call preparation guide for {prospect.companyName}
+            Prepare your battle card and reference materials for {prospect.companyName}
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button onClick={() => setCurrentModule('hunt-planner')} variant="outline">
+          <Button onClick={() => setCurrentModule('call-planner')} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Planner
+          </Button>
+          <Button onClick={() => setCurrentModule('live-call')} className="bg-green-600 hover:bg-green-700">
+            <Phone className="w-4 h-4 mr-2" />
+            Start Call
           </Button>
           <Button onClick={handlePrint} variant="secondary">
             <Printer className="w-4 h-4 mr-2" />
@@ -88,7 +76,7 @@ const CallGuide: React.FC = () => {
           </Button>
           <Button onClick={handleGeneratePDF}>
             <Download className="w-4 h-4 mr-2" />
-            Generate Call Guide
+            Generate PDF
           </Button>
         </div>
       </div>
@@ -142,42 +130,23 @@ const CallGuide: React.FC = () => {
         </div>
       </Card>
 
-      {/* Call Timer and Success Button */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Call Timer" subtitle="Track your call duration and pacing">
-          <CallTimer 
-            persona={prospect.persona}
-            onTimeUpdate={handleTimeUpdate}
-            onCallEnd={handleCallEnd}
-          />
-        </Card>
-        
-        <Card title="Call Success" subtitle="Celebrate your wins and track progress">
-          <div className="text-center space-y-4">
-            <div className="text-sm text-gray-600 mb-4">
-              Current Points: <span className="font-bold text-primary-600 text-lg">{userPoints}</span>
-            </div>
-            <SuccessButton 
-              onSuccess={handleCallSuccess}
-              className="w-full"
-            />
-            <p className="text-xs text-gray-500">
-              Click when you achieve a positive outcome!
-            </p>
-          </div>
-        </Card>
-      </div>
-
       {/* Live Industry Intelligence */}
-      <LiveIndustryIntelligence industry={prospect.industry} />
-
-      {/* Enhanced Call Guide Helper */}
-      <Card title="Live Call Assistance" subtitle="Your real-time sales coaching and call flow guide">
-        <CallGuideHelper persona={prospect.persona} />
-      </Card>
+      <CollapsibleSection
+        title="Live Industry Intelligence"
+        subtitle="Real-time market insights and talking points"
+        defaultExpanded={false}
+        priority="medium"
+      >
+        <LiveIndustryIntelligence industry={prospect.industry} />
+      </CollapsibleSection>
 
       {/* Strategic Closings */}
-      <Card title="Strategic Closing Techniques" subtitle="Outcome-specific closing approaches">
+      <CollapsibleSection
+        title="Strategic Closing Techniques"
+        subtitle="Outcome-specific closing approaches"
+        defaultExpanded={false}
+        priority="medium"
+      >
         <div className="space-y-6">
           {/* Meeting Booking Closes */}
           <div>
@@ -244,20 +213,27 @@ const CallGuide: React.FC = () => {
             </div>
           </div>
         </div>
-      </Card>
+      </CollapsibleSection>
 
       {/* Enhanced Content Selection */}
-      <EnhancedContentLibrary />
+      <CollapsibleSection
+        title="Enhanced Content Library"
+        subtitle="Persona-specific openers, talking points, and objection handlers"
+        defaultExpanded={false}
+        priority="medium"
+      >
+        <EnhancedContentLibrary />
+      </CollapsibleSection>
 
-      {/* Call Guide Preview */}
-      <Card title="Printable Call Guide" subtitle="Your complete reference sheet for the call">
+      {/* Guide Preview */}
+      <Card title="Printable Guide" subtitle="Your complete reference sheet for the call">
         <div className="bg-white border-2 border-gray-300 rounded-lg p-6 print:shadow-none print:border-0" id="call-guide">
           {/* Header */}
           <div className="border-b border-gray-200 pb-4 mb-6">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">THE W.O.L.F. DEN</h1>
-                <p className="text-sm text-gray-600">Campbell & Co. Call Guide</p>
+                <h1 className="text-2xl font-bold text-gray-900">W.O.L.F</h1>
+                <p className="text-sm text-gray-600">Campbell & Co. Guide</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">Generated: {new Date().toLocaleDateString()}</p>
@@ -358,7 +334,7 @@ const CallGuide: React.FC = () => {
           <div className="border-t border-gray-200 pt-4 mt-6">
             <div className="flex justify-between items-center text-xs text-gray-500">
               <p>Campbell & Co. - Your Trusted Insurance Partner</p>
-              <p>The W.O.L.F. Den: Wisdom • Opportunity • Leadership • Focus</p>
+              <p>W.O.L.F: Wisdom • Opportunity • Leadership • Focus</p>
             </div>
           </div>
         </div>

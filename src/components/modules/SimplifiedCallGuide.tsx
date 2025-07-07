@@ -19,7 +19,7 @@ const SimplifiedCallGuide: React.FC = () => {
         <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Call Strategy Ready</h2>
         <p className="text-gray-600 mb-6">Let's get you set up first</p>
-        <Button onClick={() => setCurrentModule('hunt-planner')}>
+        <Button onClick={() => setCurrentModule('call-planner')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Setup
         </Button>
@@ -249,7 +249,7 @@ const SimplifiedCallGuide: React.FC = () => {
       <div className="mt-8 text-center">
         <Button 
           variant="outline" 
-          onClick={() => setCurrentModule('hunt-planner')}
+          onClick={() => setCurrentModule('call-planner')}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Setup
