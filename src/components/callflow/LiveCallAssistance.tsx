@@ -18,7 +18,8 @@ import {
   BookOpen,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Trophy
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -30,14 +31,6 @@ import { useAppStore } from '@/store';
 import { callObjectives } from '@/data/content';
 import { zoomPhoneService } from '@/services/zoomPhone';
 
-const CALL_OUTCOMES = [
-  { value: 'meeting-booked', label: '✅ Meeting Booked', description: 'Successfully scheduled a follow-up meeting' },
-  { value: 'interested', label: '🎯 Interested', description: 'Expressed interest, needs follow-up' },
-  { value: 'callback', label: '📞 Callback Requested', description: 'Asked to call back at a specific time' },
-  { value: 'email-info', label: '📧 Send Information', description: 'Requested information to be sent via email' },
-  { value: 'nurture', label: '🌱 Nurture', description: 'Potential future opportunity, add to nurture sequence' },
-  { value: 'no-go', label: '❌ No Go', description: 'Not a good fit or not interested' }
-];
 
 const NO_GO_REASONS = [
   'Already have coverage',
@@ -72,7 +65,10 @@ interface ContentItem {
 
 const LiveCallAssistance: React.FC = () => {
   const { prospect, addCallLog, selectedContent } = useAppStore();
-  const [isCallActive, setIsCallActive] = useState(false);
+  
+  // Call states - more granular control
+  const [callPrepared, setCallPrepared] = useState(false); // Timer started, ready to call
+  const [callInProgress, setCallInProgress] = useState(false); // Zoom call initiated
   const [currentStep, setCurrentStep] = useState(0);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
@@ -82,13 +78,17 @@ const LiveCallAssistance: React.FC = () => {
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const [userPoints, setUserPoints] = useState(0);
   const [showOutcomeModal, setShowOutcomeModal] = useState(false);
-  const [callOutcome, setCallOutcome] = useState<string>('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showNoGoModal, setShowNoGoModal] = useState(false);
   const [noGoReason, setNoGoReason] = useState<string>('');
   const [additionalContext, setAdditionalContext] = useState<string>('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [librarySearchTerm, setLibrarySearchTerm] = useState('');
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+  
+  // Computed call states for easier logic
+  const isCallActive = callPrepared || callInProgress;
   
   // Auto-save notes to localStorage with debouncing
   useEffect(() => {
@@ -194,7 +194,20 @@ const LiveCallAssistance: React.FC = () => {
     setCallFlowSteps(initializeCallFlowSteps());
   }, [selectedContent]); // initializeCallFlowSteps is stable as it only depends on selectedContent
 
-  const handleStartCall = () => {
+  // Start the call session (timer) without Zoom
+  const handleStartSession = () => {
+    if (!prospect) {
+      alert('No prospect selected. Please go to Planner first to select a prospect.');
+      return;
+    }
+
+    setCallPrepared(true);
+    setCallStartTime(new Date());
+    console.log('Call session started for:', prospect.contactName);
+  };
+
+  // Initiate the actual Zoom Phone call
+  const handleInitiateCall = () => {
     if (!prospect) {
       alert('No prospect selected. Please go to Planner first to select a prospect.');
       return;
@@ -206,6 +219,12 @@ const LiveCallAssistance: React.FC = () => {
     }
 
     try {
+      // Start timer if not already started
+      if (!callPrepared) {
+        setCallPrepared(true);
+        setCallStartTime(new Date());
+      }
+
       // Initiate the phone call through Zoom Phone
       const callInitiated = zoomPhoneService.initiateCall({
         phoneNumber: prospect.contactPhone,
@@ -215,9 +234,8 @@ const LiveCallAssistance: React.FC = () => {
       });
 
       if (callInitiated) {
-        setIsCallActive(true);
-        setCallStartTime(new Date());
-        console.log('Call initiated successfully for:', prospect.contactName, prospect.contactPhone);
+        setCallInProgress(true);
+        console.log('Zoom call initiated successfully for:', prospect.contactName, prospect.contactPhone);
       } else {
         alert('Failed to initiate call. Please check if Zoom Phone is installed and configured.');
       }
@@ -227,70 +245,14 @@ const LiveCallAssistance: React.FC = () => {
     }
   };
 
+  // End the call and show outcome options
   const handleEndCall = () => {
-    // Stop the timer and show outcome selection
-    setIsCallActive(false);
+    setCallPrepared(false);
+    setCallInProgress(false);
+    // Show contextual outcome options instead of generic modal
     setShowOutcomeModal(true);
   };
 
-  const handleOutcomeSubmit = () => {
-    if (!callOutcome) {
-      alert('Please select a call outcome');
-      return;
-    }
-
-    if (callOutcome === 'no-go' && !noGoReason) {
-      alert('Please select a reason for No Go');
-      return;
-    }
-    
-    // Clear the saved notes from localStorage
-    if (prospect) {
-      const storageKey = `wolf-den-call-notes-${prospect.companyName}-${prospect.contactName}`;
-      localStorage.removeItem(storageKey);
-    }
-    
-    // Create call log with notes and outcome
-    if (prospect && callStartTime) {
-      const endTime = new Date();
-      const duration = Math.floor((endTime.getTime() - callStartTime.getTime()) / 1000); // Duration in seconds
-      
-      const callLog = {
-        id: `call-${Date.now()}`,
-        leadId: `${prospect.companyName}-${prospect.contactName}`,
-        outcome: callOutcome as 'meeting-booked' | 'nurture' | 'disqualified' | 'follow-up',
-        intel: callNotes || 'No notes recorded',
-        bestTalkingPoint: callNotes.split('\n')[0] || 'No specific talking point',
-        keyTakeaway: callNotes.split('\n').slice(-1)[0] || 'No key takeaway noted',
-        createdAt: new Date(),
-        callDuration: duration,
-        additionalInfo: {
-          companyInsights: callNotes,
-          nextSteps: callOutcome === 'meeting-booked' ? 'Meeting scheduled' : 
-                     callOutcome === 'callback' ? 'Callback scheduled' :
-                     callOutcome === 'email-info' ? 'Information to be sent' :
-                     callOutcome === 'no-go' ? `Not qualified: ${noGoReason}` : 'Follow-up needed',
-          outcome: callOutcome,
-          noGoReason: callOutcome === 'no-go' ? noGoReason : undefined,
-          additionalContext: additionalContext || undefined
-        }
-      };
-      
-      addCallLog(callLog);
-    }
-    
-    // Reset call-specific state
-    setCallStartTime(null);
-    setShowOutcomeModal(false);
-    setCallOutcome('');
-    setNoGoReason('');
-    setAdditionalContext('');
-    
-    // Reset call flow steps
-    setCallFlowSteps(callFlowSteps.map(step => ({ ...step, completed: false })));
-    setCurrentStep(0);
-    setCallNotes('');
-  };
 
   const handleStepComplete = (stepIndex: number) => {
     const newSteps = [...callFlowSteps];
@@ -304,7 +266,8 @@ const LiveCallAssistance: React.FC = () => {
   };
 
   const handleReset = () => {
-    setIsCallActive(false);
+    setCallPrepared(false);
+    setCallInProgress(false);
     setCurrentStep(0);
     setCallFlowSteps(callFlowSteps.map(step => ({ ...step, completed: false })));
     setCallNotes('');
@@ -315,6 +278,65 @@ const LiveCallAssistance: React.FC = () => {
       const storageKey = `wolf-den-call-notes-${prospect.companyName}-${prospect.contactName}`;
       localStorage.removeItem(storageKey);
     }
+  };
+
+  // Handle call success outcome
+  const handleCallSuccessAction = () => {
+    setShowOutcomeModal(false);
+    setShowSuccessModal(true);
+  };
+
+  // Handle no-go outcome
+  const handleNoGoAction = () => {
+    setShowOutcomeModal(false);
+    setShowNoGoModal(true);
+  };
+
+  // Handle no-go submission
+  const handleNoGoSubmit = () => {
+    if (!noGoReason) {
+      alert('Please select a reason for No Go');
+      return;
+    }
+    
+    // Clear the saved notes from localStorage
+    if (prospect) {
+      const storageKey = `wolf-den-call-notes-${prospect.companyName}-${prospect.contactName}`;
+      localStorage.removeItem(storageKey);
+    }
+    
+    // Create call log with no-go outcome
+    if (prospect && callStartTime) {
+      const endTime = new Date();
+      const duration = Math.floor((endTime.getTime() - callStartTime.getTime()) / 1000);
+      
+      const callLog = {
+        id: `call-${Date.now()}`,
+        leadId: `${prospect.companyName}-${prospect.contactName}`,
+        outcome: 'disqualified' as 'meeting-booked' | 'nurture' | 'disqualified' | 'follow-up',
+        intel: callNotes || 'No answer - unable to connect',
+        bestTalkingPoint: 'N/A',
+        keyTakeaway: `No Go: ${noGoReason}`,
+        createdAt: new Date(),
+        callDuration: duration,
+        additionalInfo: {
+          companyInsights: callNotes,
+          nextSteps: 'No follow-up required',
+          outcome: 'no-go',
+          noGoReason: noGoReason,
+          additionalContext: additionalContext || undefined
+        }
+      };
+      
+      addCallLog(callLog);
+    }
+    
+    // Reset state
+    setCallStartTime(null);
+    setShowNoGoModal(false);
+    setNoGoReason('');
+    setAdditionalContext('');
+    handleReset(); // Use the existing reset function
   };
 
   const handleBookMeeting = () => {
@@ -396,12 +418,22 @@ const LiveCallAssistance: React.FC = () => {
         />
 
         {/* Call Status Card */}
-        <Card className={`${isCallActive ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
+        <Card className={`${
+          callInProgress ? 'border-green-500 bg-green-50 dark:bg-green-900/20' :
+          callPrepared ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' :
+          'border-gray-200 dark:border-gray-700'
+        }`}>
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-3">
-              <div className={`w-4 h-4 rounded-full ${isCallActive ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'}`} />
+              <div className={`w-4 h-4 rounded-full ${
+                callInProgress ? 'bg-green-500 animate-pulse' :
+                callPrepared ? 'bg-blue-500 animate-pulse' :
+                'bg-gray-300 dark:bg-gray-600'
+              }`} />
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {isCallActive ? 'Call in Progress' : 'Call Assistant'}
+                {callInProgress ? 'Call in Progress' :
+                 callPrepared ? 'Session Active' :
+                 'Call Assistant'}
               </h2>
             </div>
             
@@ -412,15 +444,16 @@ const LiveCallAssistance: React.FC = () => {
 
             {/* Call Controls */}
             <div className="flex justify-center gap-3">
-              {!isCallActive ? (
+              {!callPrepared && !callInProgress ? (
                 <>
+                  {/* Initial state - show Start button */}
                   <Button 
-                    onClick={handleStartCall}
+                    onClick={handleStartSession}
                     size="lg"
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Play className="w-5 h-5 mr-2" />
-                    Start Call
+                    Start
                   </Button>
                   {(callNotes || callFlowSteps.some(step => step.completed)) && (
                     <Button 
@@ -432,15 +465,39 @@ const LiveCallAssistance: React.FC = () => {
                     </Button>
                   )}
                 </>
+              ) : callPrepared && !callInProgress ? (
+                <>
+                  {/* Session started - show Call and End buttons */}
+                  <Button 
+                    onClick={handleInitiateCall}
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Phone className="w-5 h-5 mr-2" />
+                    Call
+                  </Button>
+                  <Button 
+                    onClick={handleEndCall}
+                    variant="secondary"
+                    size="lg"
+                  >
+                    <Square className="w-5 h-5 mr-2" />
+                    End
+                  </Button>
+                </>
               ) : (
-                <Button 
-                  onClick={handleEndCall}
-                  variant="secondary"
-                  size="lg"
-                >
-                  <Square className="w-5 h-5 mr-2" />
-                  End Call
-                </Button>
+                <>
+                  {/* Call in progress - show End button only */}
+                  <Button 
+                    onClick={handleEndCall}
+                    variant="secondary"
+                    size="lg"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <Square className="w-5 h-5 mr-2" />
+                    End Call
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -1129,17 +1186,17 @@ Tips:
         </div>
       )}
 
-      {/* Call Outcome Modal */}
+      {/* Call Outcome Modal - Contextual Options */}
       {showOutcomeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Call Outcome</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">How did the call go?</h3>
                 <button
                   onClick={() => setShowOutcomeModal(false)}
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -1148,97 +1205,148 @@ Tips:
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Call Summary */}
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
                   <div className="text-sm text-gray-600 dark:text-gray-300">
-                    <div className="flex justify-between mb-2">
-                      <span>Contact:</span>
-                      <span className="font-medium">{prospect?.contactName}</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                      <span>Company:</span>
-                      <span className="font-medium">{prospect?.companyName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Duration:</span>
-                      <span className="font-medium">
-                        {callStartTime ? Math.floor((Date.now() - callStartTime.getTime()) / 1000 / 60) : 0} minutes
-                      </span>
+                    <div className="font-medium text-gray-900 dark:text-white">{prospect?.contactName}</div>
+                    <div className="text-sm">{prospect?.companyName}</div>
+                    <div className="text-xs mt-2">
+                      Duration: {callStartTime ? Math.floor((Date.now() - callStartTime.getTime()) / 1000 / 60) : 0} minutes
                     </div>
                   </div>
                 </div>
 
-                {/* Outcome Selection */}
+                {/* Contextual Action Buttons */}
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleCallSuccessAction}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    size="lg"
+                  >
+                    <Trophy className="w-5 h-5 mr-2" />
+                    Call Success
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleNoGoAction}
+                    variant="secondary"
+                    className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:text-red-400 dark:border-red-600 dark:hover:bg-red-900/20"
+                    size="lg"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    No Go
+                  </Button>
+                </div>
+
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center pt-2">
+                  Select the outcome to log your call details
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Success Modal - Uses existing SuccessButton component */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">🎉 Log Your Success!</h3>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <SuccessButton 
+                onSuccess={(type, points) => {
+                  handleCallSuccess(type, points);
+                  setShowSuccessModal(false);
+                  handleReset(); // Reset the call state after logging success
+                }}
+                className="w-full"
+              />
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* No Go Modal */}
+      {showNoGoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">No Go - Quick Note</h3>
+                <button
+                  onClick={() => setShowNoGoModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Select Call Outcome <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    What happened? <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {CALL_OUTCOMES.map((outcome) => (
+                  <div className="grid grid-cols-1 gap-2">
+                    {NO_GO_REASONS.map((reason) => (
                       <button
-                        key={outcome.value}
-                        onClick={() => setCallOutcome(outcome.value)}
-                        className={`p-3 rounded-lg border text-left transition-colors ${
-                          callOutcome === outcome.value
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                        key={reason}
+                        onClick={() => setNoGoReason(reason)}
+                        className={`p-3 text-left border rounded-lg transition-colors ${
+                          noGoReason === reason
+                            ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
                             : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                         }`}
                       >
-                        <div className="font-medium text-sm">{outcome.label}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{outcome.description}</div>
+                        <div className="text-sm font-medium">{reason}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* No Go Reason (only show if No Go is selected) */}
-                {callOutcome === 'no-go' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Reason for No Go <span className="text-red-500">*</span>
-                    </label>
-                    <select 
-                      value={noGoReason}
-                      onChange={(e) => setNoGoReason(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="">Select a reason...</option>
-                      {NO_GO_REASONS.map((reason) => (
-                        <option key={reason} value={reason}>{reason}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Additional Context */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Additional Context (Optional)
+                    Additional Notes (Optional)
                   </label>
                   <textarea
                     value={additionalContext}
                     onChange={(e) => setAdditionalContext(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     rows={3}
-                    placeholder="Any additional notes about the call outcome..."
+                    placeholder="Any other details..."
                   />
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <Button 
-                    onClick={() => setShowOutcomeModal(false)}
+                    onClick={() => setShowNoGoModal(false)}
                     variant="secondary"
                     className="flex-1"
                   >
                     Cancel
                   </Button>
                   <Button 
-                    onClick={handleOutcomeSubmit}
-                    className="flex-1"
+                    onClick={handleNoGoSubmit}
+                    className="flex-1 bg-red-600 hover:bg-red-700"
                   >
-                    Save & Complete Call
+                    Log No Go
                   </Button>
                 </div>
               </div>
