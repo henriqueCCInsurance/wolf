@@ -15,7 +15,7 @@ const Dashboard: React.FC = () => {
   // Calculate statistics
   const totalCalls = callLogs.length;
   const successfulCalls = callLogs.filter(log => log.outcome === 'meeting-booked').length;
-  const successRate = totalCalls > 0 ? (successfulCalls / totalCalls * 100).toFixed(1) : '0';
+  const successRate = totalCalls > 0 ? (successfulCalls / totalCalls * 100) : 0;
   const todayCalls = callLogs.filter(log => {
     const today = new Date().toDateString();
     return new Date(log.createdAt).toDateString() === today;
@@ -120,14 +120,79 @@ const Dashboard: React.FC = () => {
   // Use the appropriate workflow based on mode
   const workflowSteps = salesWizardMode ? salesWizardWorkflowSteps : standardWorkflowSteps;
   
-  // Weekly performance data (mock data for demo)
-  const weeklyData = [
-    { day: 'Mon', calls: 12, success: 4 },
-    { day: 'Tue', calls: 15, success: 6 },
-    { day: 'Wed', calls: 18, success: 8 },
-    { day: 'Thu', calls: 14, success: 5 },
-    { day: 'Fri', calls: 20, success: 9 },
-  ];
+  // Generate weekly performance data from actual call logs
+  const generateWeeklyData = () => {
+    const today = new Date();
+    const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+    
+    const weeklyData = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      
+      const dayLogs = callLogs.filter(log => {
+        const logDate = new Date(log.createdAt);
+        return logDate.toDateString() === day.toDateString();
+      });
+      
+      const successfulCalls = dayLogs.filter(log => 
+        log.outcome === 'meeting-booked' || log.outcome === 'follow-up'
+      ).length;
+      
+      weeklyData.push({
+        day: dayNames[i],
+        calls: dayLogs.length,
+        success: successfulCalls
+      });
+    }
+    
+    return weeklyData;
+  };
+  
+  const weeklyData = generateWeeklyData();
+  
+  // Calculate trends based on actual data
+  const calculateTrend = (current: number, previous: number) => {
+    if (previous === 0) return { trend: '0%', trendUp: false };
+    const change = ((current - previous) / previous) * 100;
+    const trend = change > 0 ? `+${change.toFixed(1)}%` : `${change.toFixed(1)}%`;
+    return { trend, trendUp: change > 0 };
+  };
+  
+  // Calculate previous week's stats for trend comparison
+  const getPreviousWeekStats = () => {
+    const today = new Date();
+    const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    const previousWeekLogs = callLogs.filter(log => {
+      const logDate = new Date(log.createdAt);
+      return logDate >= weekStart && logDate <= weekEnd;
+    });
+    
+    const previousWeekSuccessful = previousWeekLogs.filter(log => 
+      log.outcome === 'meeting-booked' || log.outcome === 'follow-up'
+    ).length;
+    
+    return {
+      calls: previousWeekLogs.length,
+      successRate: previousWeekLogs.length > 0 ? (previousWeekSuccessful / previousWeekLogs.length * 100) : 0
+    };
+  };
+  
+  const previousWeekStats = getPreviousWeekStats();
+  const currentWeekCalls = weeklyData.reduce((sum, day) => sum + day.calls, 0);
+  const currentWeekSuccess = weeklyData.reduce((sum, day) => sum + day.success, 0);
+  const currentWeekSuccessRate = currentWeekCalls > 0 ? (currentWeekSuccess / currentWeekCalls * 100) : 0;
+  
+  const callsTrend = calculateTrend(currentWeekCalls, previousWeekStats.calls);
+  const successTrend = calculateTrend(currentWeekSuccessRate, previousWeekStats.successRate);
+  
+  // For new users, don't show trends until they have some data
+  const isNewUser = callLogs.length === 0;
   
   const stats = [
     {
@@ -135,23 +200,23 @@ const Dashboard: React.FC = () => {
       value: totalCalls,
       icon: Phone,
       color: 'bg-blue-500',
-      trend: '+12%',
-      trendUp: true
+      trend: isNewUser ? null : callsTrend.trend,
+      trendUp: callsTrend.trendUp
     },
     {
       label: 'Success Rate',
-      value: `${successRate}%`,
+      value: `${successRate.toFixed(1)}%`,
       icon: Trophy,
       color: 'bg-green-500',
-      trend: '+5%',
-      trendUp: true
+      trend: isNewUser ? null : successTrend.trend,
+      trendUp: successTrend.trendUp
     },
     {
       label: 'Today\'s Calls',
       value: todayCalls,
       icon: Calendar,
       color: 'bg-purple-500',
-      trend: '0%',
+      trend: null, // Don't show trend for daily data
       trendUp: false
     },
     {
@@ -159,8 +224,8 @@ const Dashboard: React.FC = () => {
       value: battleCards.length,
       icon: Target,
       color: 'bg-orange-500',
-      trend: '+8%',
-      trendUp: true
+      trend: null, // Don't show trend for battle cards
+      trendUp: false
     }
   ];
   
@@ -339,13 +404,20 @@ const Dashboard: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-300">{stat.label}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{stat.value}</p>
-                    <div className="flex items-center mt-2">
-                      <TrendingUp size={14} className={stat.trendUp ? 'text-green-500' : 'text-red-500'} />
-                      <span className={`text-sm ml-1 ${stat.trendUp ? 'text-green-500' : 'text-red-500'}`}>
-                        {stat.trend}
-                      </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-300 ml-1">vs last week</span>
-                    </div>
+                    {stat.trend && (
+                      <div className="flex items-center mt-2">
+                        <TrendingUp size={14} className={stat.trendUp ? 'text-green-500' : 'text-red-500'} />
+                        <span className={`text-sm ml-1 ${stat.trendUp ? 'text-green-500' : 'text-red-500'}`}>
+                          {stat.trend}
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-300 ml-1">vs last week</span>
+                      </div>
+                    )}
+                    {!stat.trend && isNewUser && (
+                      <div className="flex items-center mt-2">
+                        <span className="text-sm text-gray-500 dark:text-gray-300">Start tracking your progress</span>
+                      </div>
+                    )}
                   </div>
                   <div className={`p-3 rounded-lg ${stat.color} bg-opacity-10`}>
                     <Icon size={24} className={`${stat.color.replace('bg-', 'text-')}`} />

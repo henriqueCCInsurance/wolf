@@ -13,7 +13,9 @@ interface SearchConfig {
 // Enhanced search service with real API integration capabilities
 export class EnhancedWebSearchService {
   private static config: SearchConfig = {
-    provider: 'mock', // Default to mock for now
+    provider: process.env.VITE_SEARCH_PROVIDER as 'google' | 'bing' | 'serpapi' || 'mock',
+    apiKey: process.env.VITE_SEARCH_API_KEY,
+    searchEngineId: process.env.VITE_GOOGLE_SEARCH_ENGINE_ID,
     maxResults: 10,
     timeout: 10000
   };
@@ -21,6 +23,11 @@ export class EnhancedWebSearchService {
   // Configure the search service
   static configure(config: Partial<SearchConfig>) {
     this.config = { ...this.config, ...config };
+    console.log('Search service configured:', { 
+      provider: this.config.provider, 
+      hasApiKey: !!this.config.apiKey,
+      hasSearchEngineId: !!this.config.searchEngineId
+    });
   }
 
   // Main search method that routes to appropriate provider
@@ -156,6 +163,8 @@ export class EnhancedWebSearchService {
   private static async searchMock(query: string): Promise<WebSearchResult[]> {
     // Simulate realistic API delay
     await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+    
+    console.log('Using mock search for query:', query);
 
     const mockDatabase = this.getEnhancedMockDatabase();
     const queryLower = query.toLowerCase();
@@ -430,6 +439,24 @@ export class EnhancedWebSearchService {
       configured,
       ready: configured || this.config.provider === 'mock'
     };
+  }
+
+  // Initialize with environment variables or fallback to mock
+  static initialize(): void {
+    const provider = process.env.VITE_SEARCH_PROVIDER as 'google' | 'bing' | 'serpapi';
+    const apiKey = process.env.VITE_SEARCH_API_KEY;
+    const searchEngineId = process.env.VITE_GOOGLE_SEARCH_ENGINE_ID;
+    
+    if (provider && apiKey) {
+      this.configure({ provider, apiKey, searchEngineId });
+      console.log('✅ Real-time search activated with provider:', provider);
+    } else {
+      console.log('⚠️  No search API configuration found, using mock data');
+      console.log('To enable real-time search, set environment variables:');
+      console.log('- VITE_SEARCH_PROVIDER (google, bing, or serpapi)');
+      console.log('- VITE_SEARCH_API_KEY');
+      console.log('- VITE_GOOGLE_SEARCH_ENGINE_ID (for Google only)');
+    }
   }
 }
 

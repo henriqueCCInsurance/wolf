@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
+    "deploy": "./deploy.sh",
+    "deploy:manual": "npm run build && echo 'Build complete! Now drag the dist/ folder to https://app.netlify.com'",
     "netlify": "npx netlify-cli@latest",
     "netlify:dev": "npx netlify-cli@latest dev",
     "netlify:deploy": "npx netlify-cli@latest deploy",

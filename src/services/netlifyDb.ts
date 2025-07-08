@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { users, callLogs, battleCards, callSequences, type User, type CallLog, type BattleCard, type CallSequence } from '@/db/schema';
+import { users, callLogs, battleCards, callSequences, type CallLog, type BattleCard, type CallSequence } from '@/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 
 // User operations
@@ -121,10 +121,10 @@ export const analyticsService = {
 
     const stats = {
       total: logs.length,
-      meetingsBooked: logs.filter(l => l.outcome === 'meeting-booked').length,
-      nurture: logs.filter(l => l.outcome === 'nurture').length,
-      disqualified: logs.filter(l => l.outcome === 'disqualified').length,
-      followUp: logs.filter(l => l.outcome === 'follow-up').length,
+      meetingsBooked: logs.filter((l: any) => l.outcome === 'meeting-booked').length,
+      nurture: logs.filter((l: any) => l.outcome === 'nurture').length,
+      disqualified: logs.filter((l: any) => l.outcome === 'disqualified').length,
+      followUp: logs.filter((l: any) => l.outcome === 'follow-up').length,
     };
 
     return stats;
@@ -138,7 +138,7 @@ export const analyticsService = {
       .limit(100);
 
     // Aggregate talking points
-    const talkingPointCounts = logs.reduce((acc, log) => {
+    const talkingPointCounts = logs.reduce((acc: Record<string, number>, log: any) => {
       const point = log.bestTalkingPoint;
       acc[point] = (acc[point] || 0) + 1;
       return acc;
@@ -146,8 +146,17 @@ export const analyticsService = {
 
     // Sort and return top N
     return Object.entries(talkingPointCounts)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
       .slice(0, limit)
       .map(([point, count]) => ({ point, count }));
   }
+};
+
+// Export a unified service object
+export const NetlifyDatabaseService = {
+  userService,
+  callLogService,
+  battleCardService,
+  callSequenceService,
+  analyticsService
 };

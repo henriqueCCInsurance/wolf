@@ -2,6 +2,10 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { EnhancedWebSearchService } from './services/enhancedWebSearch'
+
+// Initialize search service
+EnhancedWebSearchService.initialize();
 
 // Hide the splash screen once React is ready
 const hideLoader = () => {
@@ -15,6 +19,12 @@ const hideLoader = () => {
   }
 };
 
+// Safety timeout to hide loader even if initialization fails
+const safetyTimeout = setTimeout(() => {
+  console.warn('Safety timeout reached - hiding loader');
+  hideLoader();
+}, 10000); // 10 seconds max
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
@@ -22,4 +32,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 )
 
 // Hide loader after a short delay to ensure smooth transition
-setTimeout(hideLoader, 100);
+setTimeout(() => {
+  clearTimeout(safetyTimeout);
+  hideLoader();
+}, 100);

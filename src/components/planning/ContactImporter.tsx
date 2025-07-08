@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, FileText, AlertCircle, CheckCircle, Download } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle, CheckCircle, Download, Target, PhoneCall, Lock } from 'lucide-react';
 import Papa from 'papaparse';
 import { Contact } from '@/types';
 import Button from '@/components/common/Button';
+import { useAppStore } from '@/store';
 
 interface ContactImporterProps {
   isOpen: boolean;
@@ -20,12 +21,15 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
   onClose,
   onContactsImported
 }) => {
+  const { setCurrentModule } = useAppStore();
   const [file, setFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'complete'>('upload');
+  const [contactsLocked, setContactsLocked] = useState(false);
+  const [gatheringIntelligence, setGatheringIntelligence] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const requiredFields = [
@@ -61,6 +65,17 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
       complete: (results) => {
         console.log('CSV Parse Results:', results);
         
+        // Check if parsing detected too many fields (common with wrong delimiter)
+        if (results.meta.fields && results.meta.fields.length > 50) {
+          setErrors([
+            'CSV parsing error: Too many columns detected.',
+            'Please ensure your CSV file uses standard comma (,) or tab delimiters.',
+            `Detected ${results.meta.fields.length} columns - this usually indicates a delimiter issue.`
+          ]);
+          setIsProcessing(false);
+          return;
+        }
+        
         // Filter out non-critical errors
         const criticalErrors = results.errors.filter(err => 
           err.type === 'Delimiter' || err.type === 'Quotes'
@@ -82,12 +97,23 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
           return;
         }
 
+        // Check if we have reasonable headers
+        const headers = Object.keys(validData[0]);
+        if (headers.length === 0 || (headers.length === 1 && headers[0] === '')) {
+          setErrors([
+            'No column headers found in CSV file.',
+            'Please ensure your CSV has a header row with column names.',
+            'Download the sample CSV to see the expected format.'
+          ]);
+          setIsProcessing(false);
+          return;
+        }
+
         setCsvData(validData);
         setStep('mapping');
         setIsProcessing(false);
         
         // Auto-map common column names
-        const headers = Object.keys(validData[0]);
         const autoMappings: Record<string, string> = {};
         
         headers.forEach(header => {
@@ -184,9 +210,55 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
     setMappings({});
     setErrors([]);
     setStep('upload');
+    setContactsLocked(false);
+    setGatheringIntelligence(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleLockContacts = async () => {
+    setContactsLocked(true);
+    setGatheringIntelligence(true);
+    
+    // Lock contacts for guided workflow
+    const contacts = processContacts();
+    localStorage.setItem('wolf-den-locked-contacts', JSON.stringify(contacts));
+    
+    // Trigger real-time company intelligence gathering
+    try {
+      const { CompanyIntelligenceService } = await import('@/services/companyIntelligence');
+      
+      // Start gathering intelligence for all contacts in the background
+      // Cast contacts to prospects for intelligence gathering
+      const contactsAsProspects = contacts.map(contact => ({
+        ...contact,
+        persona: contact.persona || 'cost-conscious-employer' as const
+      }));
+      const intelligencePromise = CompanyIntelligenceService.getMultipleCompanyIntelligence(contactsAsProspects);
+      
+      // Store the promise for later use
+      localStorage.setItem('wolf-den-intelligence-loading', 'true');
+      
+      // Process intelligence in background
+      intelligencePromise.then(intelligence => {
+        localStorage.setItem('wolf-den-company-intelligence', JSON.stringify(Object.fromEntries(intelligence)));
+        localStorage.removeItem('wolf-den-intelligence-loading');
+        setGatheringIntelligence(false);
+      }).catch(error => {
+        console.error('Error gathering company intelligence:', error);
+        localStorage.removeItem('wolf-den-intelligence-loading');
+        setGatheringIntelligence(false);
+      });
+      
+    } catch (error) {
+      console.error('Error loading CompanyIntelligenceService:', error);
+      setGatheringIntelligence(false);
+    }
+    
+    // Set guided mode in store if available
+    onClose();
+    setCurrentModule('call-planner');
   };
 
   const downloadSampleCSV = () => {
@@ -465,10 +537,61 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
             {step === 'complete' && (
               <div className="text-center py-12">
                 <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Import Complete!</h3>
-                <p className="text-gray-600 dark:text-gray-300">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Import Complete!</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-8">
                   Successfully imported {processContacts().length} contacts
                 </p>
+                
+                {/* Navigation buttons for next steps */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <Button
+                    onClick={handleLockContacts}
+                    size="lg"
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    disabled={contactsLocked || gatheringIntelligence}
+                  >
+                    <Lock className="w-5 h-5 mr-2" />
+                    {gatheringIntelligence ? 'Gathering Intelligence...' : contactsLocked ? 'Contacts Locked' : 'Lock Contacts for Guide'}
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      onClose();
+                      setCurrentModule('battle-card');
+                    }}
+                    size="lg"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Target className="w-5 h-5 mr-2" />
+                    Generate Battle Cards
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      onClose();
+                      setCurrentModule('live-call');
+                    }}
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <PhoneCall className="w-5 h-5 mr-2" />
+                    Start Call Session
+                  </Button>
+                  
+                  <Button
+                    onClick={onClose}
+                    variant="outline"
+                    size="lg"
+                  >
+                    Continue Planning
+                  </Button>
+                </div>
+                
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Next Steps:</strong> Lock contacts for guided workflow, generate battle cards for your contacts, then start your call session with live assistance and real-time intelligence.
+                  </p>
+                </div>
               </div>
             )}
           </div>

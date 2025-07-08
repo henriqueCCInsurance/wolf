@@ -43,7 +43,7 @@ const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
-                <a href="https://campbellco.com" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 flex items-center space-x-1">
+                <a href="http://www.ccinsurance.ca" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 flex items-center space-x-1">
                   <ExternalLink size={14} />
                   <span>Campbell & Co. Website</span>
                 </a>

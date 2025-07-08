@@ -76,23 +76,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           dispatch({ type: 'LOGIN_FAILURE' });
         }
       } catch (error) {
+        console.error('Auth initialization error:', error);
         dispatch({ type: 'LOGIN_FAILURE' });
       }
     };
 
-    checkAuthStatus();
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('Auth initialization timeout - continuing without authentication');
+      dispatch({ type: 'LOGIN_FAILURE' });
+    }, 5000); // 5 second timeout
 
-    // Listen for auth state changes
-    const { data: { subscription } } = authService.onAuthStateChange((user) => {
-      if (user) {
-        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
-      } else {
-        dispatch({ type: 'LOGIN_FAILURE' });
-      }
+    checkAuthStatus().finally(() => {
+      clearTimeout(timeoutId);
     });
 
+    // Listen for auth state changes
+    let subscription: any;
+    try {
+      const { data: { subscription: authSubscription } } = authService.onAuthStateChange((user) => {
+        if (user) {
+          dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+        } else {
+          dispatch({ type: 'LOGIN_FAILURE' });
+        }
+      });
+      subscription = authSubscription;
+    } catch (error) {
+      console.error('Auth state change listener error:', error);
+      dispatch({ type: 'LOGIN_FAILURE' });
+    }
+
     return () => {
-      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, TrendingUp, MessageSquare, Lightbulb, Calendar, Clock, Award, BarChart, Download, FileSpreadsheet } from 'lucide-react';
+import { Save, TrendingUp, MessageSquare, Lightbulb, Calendar, Clock, Award, BarChart, Download, FileSpreadsheet, Trash2, AlertCircle } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { exportCallLogsToCSV, exportPerformanceMetricsToCSV, exportCompleteDataset, generateCallInsights } from '@/utils/exportUtils';
 
 const PostGame: React.FC = () => {
-  const { prospect, callLogs, addCallLog, battleCards, activeCallDuration } = useAppStore();
+  const { prospect, callLogs, addCallLog, battleCards, activeCallDuration, clearCallLogs } = useAppStore();
   
   const [formData, setFormData] = useState({
     outcome: '',
@@ -29,6 +29,7 @@ const PostGame: React.FC = () => {
   
   const [showDemoData, setShowDemoData] = useState(false);
   const [filteredCallLogs, setFilteredCallLogs] = useState<CallLog[]>(callLogs);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -115,7 +116,7 @@ const PostGame: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
     
     const callLog: CallLog = {
@@ -137,26 +138,31 @@ const PostGame: React.FC = () => {
       }
     };
     
-    addCallLog(callLog);
-    
-    // Reset form
-    setFormData({
-      outcome: '',
-      intel: '',
-      bestTalkingPoint: '',
-      keyTakeaway: '',
-      callDuration: 0,
-      newContacts: '',
-      referrals: '',
-      companyInsights: '',
-      nextSteps: '',
-      meetingType: '',
-      followUpDate: ''
-    });
-    setShowDemoData(false);
-    
-    // Show success message (could be improved with a toast)
-    alert('Call log saved successfully!');
+    try {
+      await addCallLog(callLog);
+      
+      // Reset form
+      setFormData({
+        outcome: '',
+        intel: '',
+        bestTalkingPoint: '',
+        keyTakeaway: '',
+        callDuration: 0,
+        newContacts: '',
+        referrals: '',
+        companyInsights: '',
+        nextSteps: '',
+        meetingType: '',
+        followUpDate: ''
+      });
+      setShowDemoData(false);
+      
+      // Show success message (could be improved with a toast)
+      alert('Call log saved successfully!');
+    } catch (error) {
+      console.error('Error saving call log:', error);
+      alert('Call log saved locally, but failed to sync to database. Check console for details.');
+    }
   };
 
   // const recentLogs = callLogs.slice(-5).reverse(); // Now using filteredCallLogs
@@ -190,6 +196,13 @@ const PostGame: React.FC = () => {
   
   const handleExportComplete = () => {
     exportCompleteDataset(callLogs, battleCards);
+  };
+
+  const handleClearHistory = () => {
+    // Clear all call logs from the store
+    clearCallLogs();
+    setShowClearConfirm(false);
+    setFilteredCallLogs([]);
   };
 
   return (
@@ -371,13 +384,24 @@ const PostGame: React.FC = () => {
         subtitle={`${filteredCallLogs.length} of ${callLogs.length} calls`}
       >
         {callLogs.length > 0 && (
-          <div className="mb-6">
-            <EnhancedSearch
-              data={callLogs}
-              onFilteredData={(filtered) => setFilteredCallLogs(filtered as CallLog[])}
-              type="calls"
-            />
-          </div>
+          <>
+            <div className="flex justify-between items-center mb-6">
+              <EnhancedSearch
+                data={callLogs}
+                onFilteredData={(filtered) => setFilteredCallLogs(filtered as CallLog[])}
+                type="calls"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowClearConfirm(true)}
+                className="text-red-600 hover:text-red-700 ml-4"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Clear History
+              </Button>
+            </div>
+          </>
         )}
         
         {/* Filtered Call History */}
@@ -391,9 +415,19 @@ const PostGame: React.FC = () => {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h4 className="font-semibold text-gray-900">{log.leadId}</h4>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      <span>{format(log.createdAt, 'MMM d, yyyy - h:mm a')}</span>
+                    <div className="flex flex-col space-y-1">
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <Calendar className="w-4 h-4" />
+                        <span>{format(log.createdAt, 'MMM d, yyyy')}</span>
+                      </div>
+                      {log.startTime && log.endTime && (
+                        <div className="flex items-center space-x-2 text-xs text-gray-500">
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            {format(log.startTime, 'h:mm a')} - {format(log.endTime, 'h:mm a')}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -411,9 +445,14 @@ const PostGame: React.FC = () => {
                 
                 <div className="space-y-2 text-sm">
                   {log.callDuration && (
-                    <div className="flex items-center space-x-2 text-xs text-gray-500 mb-2">
-                      <Clock className="w-3 h-3" />
-                      <span>Duration: {formatDuration(log.callDuration)}</span>
+                    <div className="flex items-center space-x-4 text-xs text-gray-500 mb-2">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-3 h-3" />
+                        <span>Duration: {formatDuration(log.callDuration)}</span>
+                      </div>
+                      {log.attemptNumber && (
+                        <span>Attempt #{log.attemptNumber}</span>
+                      )}
                     </div>
                   )}
                   
@@ -470,6 +509,39 @@ const PostGame: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Clear History Confirmation Modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Clear Call History?
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              This will permanently delete all {callLogs.length} call logs. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowClearConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleClearHistory}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear All History
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Performance Dashboard */}
       {callLogs.length > 0 && (

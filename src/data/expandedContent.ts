@@ -363,6 +363,14 @@ export const expandedContentLibrary: ContentItem[] = [
   }
 ];
 
+// Import all additional content
+import { allAdditionalContent } from './additionalContent';
+
+// Export combined content library with all variations
+export const completeExpandedContentLibrary: ContentItem[] = [
+  ...expandedContentLibrary,
+  ...allAdditionalContent
+];
 // Export success outcomes for clear call objectives
 export const callObjectives = [
   {

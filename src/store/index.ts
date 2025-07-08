@@ -1,11 +1,19 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Prospect, ContentItem, CallLog, BattleCard, WebSearchResult, CallSequence, Contact } from '@/types';
+import { DatabaseService } from '@/services/database';
+import { NetlifyDatabaseService } from '@/services/netlifyDb';
 
 interface ProfileData {
   userName?: string;
   email?: string;
   phone?: string;
+  company?: string;
+  jobTitle?: string;
+  department?: string;
+  bio?: string;
+  linkedIn?: string;
+  profilePicture?: string;
   theme?: 'light' | 'dark' | 'system';
   complexityPreference?: 'simple' | 'advanced';
   whyISell?: string;
@@ -32,9 +40,10 @@ interface AppState {
   
   // Call logs
   callLogs: CallLog[];
-  addCallLog: (log: CallLog) => void;
+  addCallLog: (log: CallLog) => Promise<void>;
   updateCallLog: (id: string, updates: Partial<CallLog>) => void;
   getCallLogsForContact: (contactId: string) => CallLog[];
+  clearCallLogs: () => void;
   
   // Battle cards history
   battleCards: BattleCard[];
@@ -118,9 +127,56 @@ export const useAppStore = create<AppState>()(
       setDynamicIntelligence: (results) => set({ dynamicIntelligence: results }),
       
       // Call log actions
-      addCallLog: (log) => {
+      addCallLog: async (log) => {
         const { callLogs, activeSequenceId, callSequences } = get();
+        
+        // First, add to local state for immediate UI feedback
         set({ callLogs: [...callLogs, log] });
+        
+        // Then save to database (async)
+        try {
+          // Try Supabase first
+          await DatabaseService.addCallLog({
+            leadId: log.leadId,
+            outcome: log.outcome,
+            intel: log.intel,
+            bestTalkingPoint: log.bestTalkingPoint,
+            keyTakeaway: log.keyTakeaway,
+            callDuration: log.callDuration,
+            sequenceId: log.sequenceId,
+            contactId: log.contactId,
+            startTime: log.startTime,
+            endTime: log.endTime,
+            attemptNumber: log.attemptNumber,
+            additionalInfo: log.additionalInfo
+          });
+          console.log('✅ Call log saved to Supabase successfully');
+        } catch (supabaseError) {
+          console.warn('Supabase call log save failed, trying Netlify DB:', supabaseError);
+          
+          // Fallback to Netlify DB
+          try {
+            await NetlifyDatabaseService.callLogService.create({
+              leadId: log.leadId,
+              outcome: log.outcome,
+              intel: log.intel,
+              bestTalkingPoint: log.bestTalkingPoint,
+              keyTakeaway: log.keyTakeaway,
+              callDuration: log.callDuration || 0,
+              sequenceId: log.sequenceId || null,
+              contactId: log.contactId || null,
+              startTime: log.startTime?.toISOString() || null,
+              endTime: log.endTime?.toISOString() || null,
+              attemptNumber: log.attemptNumber || 1,
+              additionalInfo: log.additionalInfo || {},
+              userId: 'current-user' // TODO: Get from authentication context
+            });
+            console.log('✅ Call log saved to Netlify DB successfully');
+          } catch (netlifyError) {
+            console.error('Both database saves failed:', { supabaseError, netlifyError });
+            console.log('📱 Call log saved to localStorage only');
+          }
+        }
         
         // Update contact status in active sequence if applicable
         if (activeSequenceId && log.sequenceId === activeSequenceId) {
@@ -159,6 +215,9 @@ export const useAppStore = create<AppState>()(
       getCallLogsForContact: (contactId) => {
         const { callLogs } = get();
         return callLogs.filter(log => log.contactId === contactId);
+      },
+      clearCallLogs: () => {
+        set({ callLogs: [] });
       },
       
       // Battle card actions

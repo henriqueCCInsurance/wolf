@@ -1,11 +1,13 @@
 import { useState, lazy, Suspense } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/common/Layout';
 import LoginScreen from '@/components/auth/LoginScreen';
+import AuthCallback from '@/components/auth/AuthCallback';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ShortcutsHelp from '@/components/common/ShortcutsHelp';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ThemeProvider from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useAppStore } from '@/store';
@@ -18,7 +20,7 @@ const CallGuide = lazy(() => import('@/components/modules/BattleCard'));
 const LiveCallAssistance = lazy(() => import('@/components/callflow/LiveCallAssistance'));
 const EnhancedPostGame = lazy(() => import('@/components/analytics/EnhancedPostGame'));
 const HelpCenter = lazy(() => import('@/components/modules/HelpCenter'));
-const Profile = lazy(() => import('@/components/modules/Profile'));
+const Profile = lazy(() => import('@/components/modules/ProfilePage'));
 const Resources = lazy(() => import('@/components/modules/Resources'));
 const AdminDashboard = lazy(() => import('@/components/admin/AdminDashboard'));
 
@@ -154,13 +156,18 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </ThemeProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <ThemeProvider>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/*" element={<AppContent />} />
+            </Routes>
+          </AuthProvider>
+        </ThemeProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

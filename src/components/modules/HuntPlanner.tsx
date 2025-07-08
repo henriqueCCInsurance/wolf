@@ -12,6 +12,7 @@ import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
 import { PersonaType } from '@/types';
 import { EnhancedWebSearchService } from '@/services/enhancedWebSearch';
+import { CompanyIntelligenceService } from '@/services/companyIntelligence';
 
 const HuntPlanner: React.FC = () => {
   const { 
@@ -58,14 +59,50 @@ const HuntPlanner: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      setProspect({
+      const newProspect = {
         companyName: formData.companyName,
         contactName: formData.contactName,
         industry: formData.industry,
         persona: formData.persona
-      });
+      };
+      
+      setProspect(newProspect);
+      
+      // Automatically trigger company intelligence gathering when lead is locked
+      setIsGeneratingIntelligence(true);
+      try {
+        const companyIntelligence = await CompanyIntelligenceService.getCompanyIntelligence(newProspect);
+        
+        // Combine industry intelligence with company-specific intelligence
+        const combinedIntelligence = [
+          ...companyIntelligence.newsAndUpdates,
+          ...companyIntelligence.industryTrends,
+          ...companyIntelligence.companyContext
+        ];
+        
+        setDynamicIntelligence(combinedIntelligence);
+        
+        // Store the full intelligence data in localStorage for later use
+        localStorage.setItem('currentCompanyIntelligence', JSON.stringify(companyIntelligence));
+        
+        console.log('✅ Company intelligence gathered successfully');
+        console.log('Company:', companyIntelligence.companyName);
+        console.log('Key insights:', companyIntelligence.keyInsights);
+        console.log('Talking points:', companyIntelligence.talkingPoints);
+      } catch (error) {
+        console.error('Failed to gather company intelligence:', error);
+        // Fallback to basic industry intelligence
+        try {
+          const searchResults = await EnhancedWebSearchService.searchIndustryIntelligence(newProspect.industry);
+          setDynamicIntelligence(searchResults);
+        } catch (fallbackError) {
+          console.error('Fallback intelligence also failed:', fallbackError);
+        }
+      } finally {
+        setIsGeneratingIntelligence(false);
+      }
     }
   };
 

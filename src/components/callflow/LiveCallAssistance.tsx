@@ -19,7 +19,8 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  Trophy
+  Trophy,
+  Download
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -86,6 +87,7 @@ const LiveCallAssistance: React.FC = () => {
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [librarySearchTerm, setLibrarySearchTerm] = useState('');
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+  const [showExportMenu, setShowExportMenu] = useState(false);
   
   // Computed call states for easier logic
   const isCallActive = callPrepared || callInProgress;
@@ -103,6 +105,18 @@ const LiveCallAssistance: React.FC = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [callNotes, prospect]);
+  
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showExportMenu) {
+        setShowExportMenu(false);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showExportMenu]);
   
   // Load saved notes when prospect changes
   useEffect(() => {
@@ -257,11 +271,26 @@ const LiveCallAssistance: React.FC = () => {
   const handleStepComplete = (stepIndex: number) => {
     const newSteps = [...callFlowSteps];
     newSteps[stepIndex].completed = true;
-    setCallFlowSteps(newSteps);
     
-    // Auto-advance to next step
-    if (stepIndex === currentStep && stepIndex < callFlowSteps.length - 1) {
-      setCurrentStep(stepIndex + 1);
+    // Self-stacking: move completed item to bottom
+    const completedStep = newSteps[stepIndex];
+    const remainingSteps = newSteps.filter((_, index) => index !== stepIndex);
+    
+    // Separate completed and pending steps
+    const pendingSteps = remainingSteps.filter(step => !step.completed);
+    const completedSteps = remainingSteps.filter(step => step.completed);
+    
+    // Reconstruct array with pending steps first, then completed steps
+    const reorderedSteps = [...pendingSteps, ...completedSteps, completedStep];
+    
+    setCallFlowSteps(reorderedSteps);
+    
+    // Update current step to focus on next pending step
+    const nextPendingIndex = pendingSteps.findIndex(step => !step.completed);
+    if (nextPendingIndex >= 0) {
+      setCurrentStep(nextPendingIndex);
+    } else {
+      setCurrentStep(0); // Reset to first pending step
     }
   };
 
@@ -362,6 +391,42 @@ const LiveCallAssistance: React.FC = () => {
     const successNote = `\n\n🎯 Success: ${type.replace('-', ' ').toUpperCase()} (+${points} points)`;
     setCallNotes(prev => prev + successNote);
     
+    // Create proper call log for success
+    if (prospect && callStartTime) {
+      const endTime = new Date();
+      const duration = Math.floor((endTime.getTime() - callStartTime.getTime()) / 1000);
+      
+      const callLog = {
+        id: `call-${Date.now()}`,
+        leadId: `${prospect.companyName}-${prospect.contactName}`,
+        outcome: type === 'meeting-booked' ? 'meeting-booked' as const : 
+                 type === 'follow-up' ? 'follow-up' as const : 
+                 'nurture' as const,
+        intel: callNotes + successNote || 'Successful call completed',
+        bestTalkingPoint: 'User-selected content from battle card',
+        keyTakeaway: `${type.replace('-', ' ').toUpperCase()} achieved (+${points} points)`,
+        createdAt: new Date(),
+        callDuration: duration,
+        additionalInfo: {
+          companyInsights: callNotes,
+          nextSteps: type === 'meeting-booked' ? 'Meeting scheduled' : 
+                    type === 'follow-up' ? 'Follow-up scheduled' : 
+                    'Continue nurturing relationship',
+          outcome: 'success',
+          successType: type,
+          pointsEarned: points
+        }
+      };
+      
+      addCallLog(callLog);
+      
+      // Clear notes after logging
+      if (prospect) {
+        const storageKey = `wolf-den-call-notes-${prospect.companyName}-${prospect.contactName}`;
+        localStorage.removeItem(storageKey);
+      }
+    }
+    
     // Log analytics
     console.log(`Call success: ${type}, Points: ${points}`);
   };
@@ -387,6 +452,70 @@ const LiveCallAssistance: React.FC = () => {
       content.content.toLowerCase().includes(librarySearchTerm.toLowerCase()) ||
       (content.context && content.context.toLowerCase().includes(librarySearchTerm.toLowerCase()))
     );
+  };
+
+  const handleExportNotes = (format: 'txt' | 'pdf' | 'docx') => {
+    if (!callNotes || !prospect) return;
+    
+    const timestamp = new Date().toLocaleString();
+    const header = `Call Notes\n${prospect.companyName} - ${prospect.contactName}\n${timestamp}\n\n`;
+    const content = header + callNotes;
+    
+    if (format === 'txt') {
+      // Export as text file
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `call-notes-${prospect.companyName}-${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else if (format === 'pdf') {
+      // For PDF, we'll use jsPDF (already in the project)
+      import('jspdf').then(({ jsPDF }) => {
+        const doc = new jsPDF();
+        const lines = content.split('\n');
+        let y = 20;
+        
+        lines.forEach(line => {
+          if (y > 280) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(line, 20, y);
+          y += 7;
+        });
+        
+        doc.save(`call-notes-${prospect.companyName}-${Date.now()}.pdf`);
+      });
+    } else if (format === 'docx') {
+      // For Word format, create a simple HTML that Word can open
+      const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+        <head><meta charset="utf-8"><title>Call Notes</title></head>
+        <body>
+          <h1>Call Notes</h1>
+          <h2>${prospect.companyName} - ${prospect.contactName}</h2>
+          <p>${timestamp}</p>
+          <hr>
+          <pre style="font-family: Arial, sans-serif; white-space: pre-wrap;">${callNotes}</pre>
+        </body>
+        </html>
+      `;
+      const blob = new Blob([htmlContent], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `call-notes-${prospect.companyName}-${Date.now()}.doc`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    
+    setShowExportMenu(false);
   };
 
   const topObjectives = callObjectives.slice(0, 3);
@@ -568,6 +697,39 @@ const LiveCallAssistance: React.FC = () => {
                 <Clock className="w-4 h-4" />
               </button>
               <div className="flex-1" />
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  disabled={!callNotes}
+                  className="p-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50 text-sm flex items-center gap-1"
+                  title="Export Notes"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+                {showExportMenu && callNotes && (
+                  <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
+                    <button
+                      onClick={() => handleExportNotes('txt')}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Export as Text (.txt)
+                    </button>
+                    <button
+                      onClick={() => handleExportNotes('pdf')}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Export as PDF
+                    </button>
+                    <button
+                      onClick={() => handleExportNotes('docx')}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Export as Word (.docx)
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setCallNotes('')}
                 disabled={!isCallActive || !callNotes}
@@ -746,6 +908,20 @@ Tips:
           </div>
         </Card>
 
+        {/* Access Library Button - Moved above call flow progress */}
+        {selectedContent.length > 0 && (
+          <Card title="Content Library" subtitle="Access your scripts and talking points">
+            <Button
+              onClick={handleAccessLibrary}
+              variant="outline"
+              className="w-full"
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Access Library (Search Scripts)
+            </Button>
+          </Card>
+        )}
+
         {/* Call Flow Steps */}
         <Card title="Call Flow Checklist" subtitle="Follow this proven framework">
           <div className="space-y-3">
@@ -854,19 +1030,6 @@ Tips:
             ))}
           </div>
 
-          {/* Access Library Button */}
-          {selectedContent.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                onClick={handleAccessLibrary}
-                variant="outline"
-                className="w-full"
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Access Library (Search Scripts)
-              </Button>
-            </div>
-          )}
 
           {/* Call Flow Tips */}
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1271,7 +1434,12 @@ Tips:
                 onSuccess={(type, points) => {
                   handleCallSuccess(type, points);
                   setShowSuccessModal(false);
-                  handleReset(); // Reset the call state after logging success
+                  // Reset call state after success (notes already cleared in handleCallSuccess)
+                  setCallPrepared(false);
+                  setCallInProgress(false);
+                  setCurrentStep(0);
+                  setCallFlowSteps(callFlowSteps.map(step => ({ ...step, completed: false })));
+                  setCallStartTime(null);
                 }}
                 className="w-full"
               />

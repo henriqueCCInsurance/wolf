@@ -1,5 +1,5 @@
 import { ContentItem } from '@/types';
-import { expandedContentLibrary, callObjectives } from './expandedContent';
+import { completeExpandedContentLibrary, callObjectives } from './expandedContent';
 
-export const contentLibrary: ContentItem[] = expandedContentLibrary;
+export const contentLibrary: ContentItem[] = completeExpandedContentLibrary;
 export { callObjectives };

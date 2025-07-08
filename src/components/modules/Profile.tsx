@@ -8,14 +8,13 @@ import Button from '@/components/common/Button';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
-  const { profile, updateProfile, advancedMode, setAdvancedMode } = useAppStore();
+  const { profile, updateProfile } = useAppStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
     userName: profile.userName || user?.name || '',
     email: profile.email || user?.email || '',
     phone: profile.phone || '',
     theme: profile.theme || 'system',
-    complexityPreference: profile.complexityPreference || (advancedMode ? 'advanced' : 'simple'),
     whyISell: profile.whyISell || ''
   });
   const [uploadedImages, setUploadedImages] = useState<string[]>(profile.motivationalImages || []);
@@ -27,13 +26,6 @@ const Profile: React.FC = () => {
       motivationalImages: uploadedImages
     });
     
-    // Update advanced mode based on complexity preference
-    if (editedProfile.complexityPreference === 'advanced') {
-      setAdvancedMode(true);
-    } else if (editedProfile.complexityPreference === 'simple') {
-      setAdvancedMode(false);
-    }
-    
     setIsEditing(false);
   };
 
@@ -43,7 +35,6 @@ const Profile: React.FC = () => {
       email: profile.email || user?.email || '',
       phone: profile.phone || '',
       theme: profile.theme || 'system',
-      complexityPreference: profile.complexityPreference || (advancedMode ? 'advanced' : 'simple'),
       whyISell: profile.whyISell || ''
     });
     setUploadedImages(profile.motivationalImages || []);
@@ -192,46 +183,6 @@ const Profile: React.FC = () => {
                 {getThemeIcon()}
                 <span className="capitalize">{profile.theme || 'system'}</span>
               </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Complexity Preference
-            </label>
-            {isEditing ? (
-              <div className="space-y-2">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="simple"
-                    checked={editedProfile.complexityPreference === 'simple'}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, complexityPreference: e.target.value as any })}
-                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-                  />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">Simple Mode</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Streamlined interface with essential features</p>
-                  </div>
-                </label>
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="advanced"
-                    checked={editedProfile.complexityPreference === 'advanced'}
-                    onChange={(e) => setEditedProfile({ ...editedProfile, complexityPreference: e.target.value as any })}
-                    className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-                  />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">Advanced Mode</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Full feature set with detailed analytics and tools</p>
-                  </div>
-                </label>
-              </div>
-            ) : (
-              <p className="text-gray-900 dark:text-gray-100 capitalize">
-                {profile.complexityPreference || (advancedMode ? 'advanced' : 'simple')} Mode
-              </p>
             )}
           </div>
         </div>

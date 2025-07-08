@@ -11,18 +11,56 @@ type CallSequenceRow = Tables['call_sequences']['Row']
 export class DatabaseService {
   // User operations
   static async getCurrentUser(): Promise<User | null> {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return null
 
-    const { data: userProfile, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+      // Check if we're using mock Supabase
+      const hasSupabaseConfig = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+      
+      if (!hasSupabaseConfig) {
+        // Return mock user for development/demo
+        return {
+          id: 'demo-user',
+          email: 'demo@example.com',
+          name: 'Demo User',
+          role: 'salesperson',
+          createdAt: new Date(),
+          settings: {
+            theme: 'light' as const,
+            notifications: true,
+            autoSave: true,
+            defaultCallObjectives: []
+          }
+        }
+      }
 
-    if (error || !userProfile) return null
+      const { data: userProfile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
 
-    return this.mapUserRowToUser(userProfile)
+      if (error || !userProfile) return null
+
+      return this.mapUserRowToUser(userProfile)
+    } catch (error) {
+      console.error('Database getCurrentUser error:', error)
+      // Return mock user as fallback
+      return {
+        id: 'demo-user',
+        email: 'demo@example.com',
+        name: 'Demo User',
+        role: 'salesperson',
+        createdAt: new Date(),
+        settings: {
+          theme: 'light' as const,
+          notifications: true,
+          autoSave: true,
+          defaultCallObjectives: []
+        }
+      }
+    }
   }
 
   static async updateUserProfile(userId: string, updates: Partial<UserRow>): Promise<User> {

@@ -5,13 +5,9 @@
 [build.environment]
   NODE_VERSION = "18"
 
-[context.production.environment]
-  VITE_SUPABASE_URL = ""
-  VITE_SUPABASE_ANON_KEY = ""
-
-[context.deploy-preview.environment]
-  VITE_SUPABASE_URL = ""
-  VITE_SUPABASE_ANON_KEY = ""
+# Environment variables should be set in Netlify dashboard
+# Site settings > Environment variables
+# Leave these empty to use the app's fallback demo mode
 
 [[redirects]]
   from = "/*"
