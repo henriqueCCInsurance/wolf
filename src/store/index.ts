@@ -165,6 +165,7 @@ export const useAppStore = create<AppState>()(
               callDuration: log.callDuration || 0,
               sequenceId: log.sequenceId || null,
               contactId: log.contactId || null,
+              battleCardId: log.battleCardId || null,
               startTime: log.startTime?.toISOString() || null,
               endTime: log.endTime?.toISOString() || null,
               attemptNumber: log.attemptNumber || 1,

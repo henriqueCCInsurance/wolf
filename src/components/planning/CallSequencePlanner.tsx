@@ -18,6 +18,7 @@ import { CallSequence, Contact } from '@/types';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import ContactImporter from './ContactImporter';
+import ClickablePhone from '@/components/common/ClickablePhone';
 import { useAppStore } from '@/store';
 
 type PlanningMode = 'standalone' | 'imported' | 'crm-sync';
@@ -293,6 +294,18 @@ const CallSequencePlanner: React.FC = () => {
                       <div className="text-sm text-gray-600 dark:text-gray-300">
                         {contact.contactName} • {contact.industry}
                         {contact.email && ` • ${contact.email}`}
+                        {contact.phone && (
+                          <>
+                            {' • '}
+                            <ClickablePhone
+                              phoneNumber={contact.phone}
+                              contactName={contact.contactName}
+                              companyName={contact.companyName}
+                              size="sm"
+                              showIcon={false}
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -430,7 +443,18 @@ const CallSequencePlanner: React.FC = () => {
                         <div className="font-medium text-gray-900 dark:text-white">{contact.companyName}</div>
                         <div className="text-sm text-gray-600 dark:text-gray-300">
                           {contact.contactName} • {contact.industry}
-                          {contact.phone && ` • ${contact.phone}`}
+                          {contact.phone && (
+                            <>
+                              {' • '}
+                              <ClickablePhone
+                                phoneNumber={contact.phone}
+                                contactName={contact.contactName}
+                                companyName={contact.companyName}
+                                size="sm"
+                                showIcon={false}
+                              />
+                            </>
+                          )}
                         </div>
                       </div>
                       

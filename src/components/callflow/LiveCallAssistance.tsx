@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Play, 
@@ -20,7 +20,10 @@ import {
   ChevronDown,
   ChevronUp,
   Trophy,
-  Download
+  Download,
+  RotateCcw,
+  ClipboardList,
+  Users
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -28,6 +31,7 @@ import CallTimer from '@/components/gamification/CallTimer';
 import SuccessButton from '@/components/gamification/SuccessButton';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
 import ReadyToCallIndicator from '@/components/callflow/ReadyToCallIndicator';
+import ClickablePhone from '@/components/common/ClickablePhone';
 import { useAppStore } from '@/store';
 import { callObjectives } from '@/data/content';
 import { zoomPhoneService } from '@/services/zoomPhone';
@@ -65,7 +69,13 @@ interface ContentItem {
 }
 
 const LiveCallAssistance: React.FC = () => {
-  const { prospect, addCallLog, selectedContent } = useAppStore();
+  const { 
+    prospect, 
+    addCallLog, 
+    selectedContent, 
+    callSequences, 
+    activeSequenceId 
+  } = useAppStore();
   
   // Call states - more granular control
   const [callPrepared, setCallPrepared] = useState(false); // Timer started, ready to call
@@ -88,13 +98,14 @@ const LiveCallAssistance: React.FC = () => {
   const [librarySearchTerm, setLibrarySearchTerm] = useState('');
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showSequenceDetails, setShowSequenceDetails] = useState(false);
   
   // Computed call states for easier logic
   const isCallActive = callPrepared || callInProgress;
   
   // Auto-save notes to localStorage with debouncing
   useEffect(() => {
-    if (prospect) {
+    if (prospect && callNotes) {
       setSaveStatus('saving');
       const timeoutId = setTimeout(() => {
         const storageKey = `wolf-den-call-notes-${prospect.companyName}-${prospect.contactName}`;
@@ -108,14 +119,17 @@ const LiveCallAssistance: React.FC = () => {
   
   // Close export menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
-      if (showExportMenu) {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showExportMenu && !target.closest('[data-export-menu]')) {
         setShowExportMenu(false);
       }
     };
     
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
   }, [showExportMenu]);
   
   // Load saved notes when prospect changes
@@ -123,62 +137,70 @@ const LiveCallAssistance: React.FC = () => {
     if (prospect) {
       const storageKey = `wolf-den-call-notes-${prospect.companyName}-${prospect.contactName}`;
       const savedNotes = localStorage.getItem(storageKey);
-      if (savedNotes) {
-        setCallNotes(savedNotes);
-      } else {
-        setCallNotes('');
-      }
+      const newNotes = savedNotes || '';
+      
+      // Only update if the notes are actually different to prevent unnecessary re-renders
+      setCallNotes(prevNotes => {
+        if (prevNotes !== newNotes) {
+          return newNotes;
+        }
+        return prevNotes;
+      });
+    } else {
+      // Clear notes if no prospect
+      setCallNotes('');
     }
-  }, [prospect]);
+  }, [prospect]); // Using full prospect object as dependency
   
+  // Define base steps as a constant to avoid recreation
+  const baseSteps = useMemo(() => [
+    {
+      id: 'opening',
+      title: 'Opening & Rapport',
+      description: 'Establish connection and set the tone',
+      completed: false,
+      tips: ['Use their name', 'Reference something personal', 'Be enthusiastic but professional']
+    },
+    {
+      id: 'permission',
+      title: 'Permission to Proceed',
+      description: 'Confirm they have time and interest',
+      completed: false,
+      tips: ['Ask for specific time commitment', 'Confirm decision-making authority']
+    },
+    {
+      id: 'discovery',
+      title: 'Discovery Questions',
+      description: 'Understand their current situation and needs',
+      completed: false,
+      tips: ['Ask open-ended questions', 'Listen for pain points', 'Take notes on key details']
+    },
+    {
+      id: 'presentation',
+      title: 'Value Presentation',
+      description: 'Present solutions tailored to their needs',
+      completed: false,
+      tips: ['Connect to discovered needs', 'Use specific examples', 'Focus on outcomes']
+    },
+    {
+      id: 'objections',
+      title: 'Handle Objections',
+      description: 'Address concerns and build confidence',
+      completed: false,
+      optional: true,
+      tips: ['Acknowledge their concern', 'Ask clarifying questions', 'Provide relevant examples']
+    },
+    {
+      id: 'close',
+      title: 'Close for Next Step',
+      description: 'Secure commitment for follow-up action',
+      completed: false,
+      tips: ['Be specific about next steps', 'Confirm their commitment', 'Set clear expectations']
+    }
+  ], []);
+
   // Initialize call flow steps with selected content integration
   const initializeCallFlowSteps = useCallback((): CallFlowStep[] => {
-    const baseSteps = [
-      {
-        id: 'opening',
-        title: 'Opening & Rapport',
-        description: 'Establish connection and set the tone',
-        completed: false,
-        tips: ['Use their name', 'Reference something personal', 'Be enthusiastic but professional']
-      },
-      {
-        id: 'permission',
-        title: 'Permission to Proceed',
-        description: 'Confirm they have time and interest',
-        completed: false,
-        tips: ['Ask for specific time commitment', 'Confirm decision-making authority']
-      },
-      {
-        id: 'discovery',
-        title: 'Discovery Questions',
-        description: 'Understand their current situation and needs',
-        completed: false,
-        tips: ['Ask open-ended questions', 'Listen for pain points', 'Take notes on key details']
-      },
-      {
-        id: 'presentation',
-        title: 'Value Presentation',
-        description: 'Present solutions tailored to their needs',
-        completed: false,
-        tips: ['Connect to discovered needs', 'Use specific examples', 'Focus on outcomes']
-      },
-      {
-        id: 'objections',
-        title: 'Handle Objections',
-        description: 'Address concerns and build confidence',
-        completed: false,
-        optional: true,
-        tips: ['Acknowledge their concern', 'Ask clarifying questions', 'Provide relevant examples']
-      },
-      {
-        id: 'close',
-        title: 'Close for Next Step',
-        description: 'Secure commitment for follow-up action',
-        completed: false,
-        tips: ['Be specific about next steps', 'Confirm their commitment', 'Set clear expectations']
-      }
-    ];
-
     // Integrate selected content into appropriate steps
     return baseSteps.map(step => {
       const stepContent = selectedContent.filter(content => {
@@ -199,14 +221,43 @@ const LiveCallAssistance: React.FC = () => {
         selectedContent: stepContent.length > 0 ? stepContent : undefined
       };
     });
-  }, [selectedContent]);
+  }, [baseSteps, selectedContent]);
 
   const [callFlowSteps, setCallFlowSteps] = useState<CallFlowStep[]>(initializeCallFlowSteps());
 
   // Update call flow steps when selected content changes
   useEffect(() => {
-    setCallFlowSteps(initializeCallFlowSteps());
-  }, [initializeCallFlowSteps]);
+    setCallFlowSteps(prevSteps => {
+      // Preserve completion status from previous steps
+      const previousStepsMap = new Map(prevSteps.map(step => [step.id, step]));
+      
+      // Integrate selected content into appropriate steps
+      const updatedSteps = baseSteps.map(step => {
+        const previousStep = previousStepsMap.get(step.id);
+        const stepContent = selectedContent.filter(content => {
+          switch (step.id) {
+            case 'opening':
+              return content.type === 'opener';
+            case 'presentation':
+              return content.type === 'thought-leadership';
+            case 'objections':
+              return content.type === 'objection-handler';
+            default:
+              return false;
+          }
+        });
+
+        return {
+          ...step,
+          // Preserve completion status if step existed before
+          completed: previousStep ? previousStep.completed : false,
+          selectedContent: stepContent.length > 0 ? stepContent : undefined
+        };
+      });
+
+      return updatedSteps;
+    });
+  }, [selectedContent, baseSteps]);
 
   // Start the call session (timer) without Zoom
   const handleStartSession = () => {
@@ -221,7 +272,7 @@ const LiveCallAssistance: React.FC = () => {
   };
 
   // Initiate the actual Zoom Phone call
-  const handleInitiateCall = () => {
+  const handleInitiateCall = async () => {
     if (!prospect) {
       alert('No prospect selected. Please go to Planner first to select a prospect.');
       return;
@@ -240,14 +291,14 @@ const LiveCallAssistance: React.FC = () => {
       }
 
       // Initiate the phone call through Zoom Phone
-      const callInitiated = zoomPhoneService.initiateCall({
+      const callInitiated = await zoomPhoneService.initiateCall({
         phoneNumber: prospect.contactPhone,
         contactName: prospect.contactName,
         companyName: prospect.companyName,
         leadId: prospect.companyName + prospect.contactName // Simple ID generation
       });
 
-      if (callInitiated) {
+      if (callInitiated.success) {
         setCallInProgress(true);
         console.log('Zoom call initiated successfully for:', prospect.contactName, prospect.contactPhone);
       } else {
@@ -264,6 +315,15 @@ const LiveCallAssistance: React.FC = () => {
     setCallPrepared(false);
     setCallInProgress(false);
     // Show contextual outcome options instead of generic modal
+    setShowOutcomeModal(true);
+  };
+
+  // Handle direct logging
+  const handleLogResults = () => {
+    if (!callPrepared && !callInProgress) {
+      alert('Please start a call session first before logging results.');
+      return;
+    }
     setShowOutcomeModal(true);
   };
 
@@ -518,6 +578,14 @@ const LiveCallAssistance: React.FC = () => {
     setShowExportMenu(false);
   };
 
+  // Get current sequence data
+  const activeSequence = activeSequenceId ? callSequences.find(seq => seq.id === activeSequenceId) : null;
+  const currentContactIndex = activeSequence ? activeSequence.contacts.findIndex(contact => 
+    contact.companyName === prospect?.companyName && contact.contactName === prospect?.contactName
+  ) : -1;
+  const totalContactsInSequence = activeSequence ? activeSequence.contacts.length : 0;
+  const isInSequence = activeSequence && currentContactIndex >= 0;
+  
   const topObjectives = callObjectives.slice(0, 3);
   const completedSteps = callFlowSteps.filter(step => step.completed).length;
   const progressPercentage = (completedSteps / callFlowSteps.length) * 100;
@@ -569,65 +637,124 @@ const LiveCallAssistance: React.FC = () => {
             <div className="text-gray-600 dark:text-gray-300">
               <div className="font-medium">{prospect.companyName}</div>
               <div className="text-sm">{prospect.contactName}</div>
+              {prospect.contactPhone && (
+                <div className="mt-1">
+                  <ClickablePhone 
+                    phoneNumber={prospect.contactPhone}
+                    contactName={prospect.contactName}
+                    companyName={prospect.companyName}
+                    size="sm"
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Call Controls */}
-            <div className="flex justify-center gap-3">
-              {!callPrepared && !callInProgress ? (
-                <>
-                  {/* Initial state - show Start button */}
-                  <Button 
-                    onClick={handleStartSession}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700"
+            {/* Sequence Progress Display */}
+            {isInSequence && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Call {currentContactIndex + 1} of {totalContactsInSequence}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowSequenceDetails(!showSequenceDetails)}
+                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
-                    <Play className="w-5 h-5 mr-2" />
-                    Start
-                  </Button>
-                  {(callNotes || callFlowSteps.some(step => step.completed)) && (
-                    <Button 
-                      onClick={handleReset}
-                      variant="outline"
-                      size="lg"
-                    >
-                      Reset
-                    </Button>
-                  )}
-                </>
-              ) : callPrepared && !callInProgress ? (
-                <>
-                  {/* Session started - show Call and End buttons */}
-                  <Button 
-                    onClick={handleInitiateCall}
-                    size="lg"
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <Phone className="w-5 h-5 mr-2" />
-                    Call
-                  </Button>
-                  <Button 
-                    onClick={handleEndCall}
-                    variant="secondary"
-                    size="lg"
-                  >
-                    <Square className="w-5 h-5 mr-2" />
-                    End
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {/* Call in progress - show End button only */}
-                  <Button 
-                    onClick={handleEndCall}
-                    variant="secondary"
-                    size="lg"
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <Square className="w-5 h-5 mr-2" />
-                    End Call
-                  </Button>
-                </>
+                    {showSequenceDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+                
+                {showSequenceDetails && (
+                  <div className="mt-2 space-y-2">
+                    <div className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">Sequence: {activeSequence.name}</div>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {activeSequence.contacts.map((contact, index) => (
+                        <div 
+                          key={contact.id} 
+                          className={`text-xs p-2 rounded ${index === currentContactIndex 
+                            ? 'bg-blue-100 dark:bg-blue-800 text-blue-900 dark:text-blue-100 font-medium' 
+                            : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span>{contact.contactName} - {contact.companyName}</span>
+                            <span className={`px-1 py-0.5 rounded text-xs ${
+                              contact.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
+                              contact.status === 'called' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                              contact.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' :
+                              'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
+                            }`}>
+                              {contact.status === 'pending' ? 'Pending' : 
+                               contact.status === 'called' ? 'Called' :
+                               contact.status === 'success' ? 'Success' : 'Failed'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Enhanced 5-Button Call Controls */}
+            <div className="flex justify-center gap-2 flex-wrap">
+              {/* Start Button */}
+              {!callPrepared && !callInProgress && (
+                <Button 
+                  onClick={handleStartSession}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Play className="w-4 h-4 mr-1" />
+                  Start
+                </Button>
               )}
+              
+              {/* Call Button */}
+              {(!callInProgress) && (
+                <Button 
+                  onClick={handleInitiateCall}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Phone className="w-4 h-4 mr-1" />
+                  Call
+                </Button>
+              )}
+              
+              {/* End Button */}
+              {(callPrepared || callInProgress) && (
+                <Button 
+                  onClick={handleEndCall}
+                  variant="secondary"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Square className="w-4 h-4 mr-1" />
+                  End
+                </Button>
+              )}
+              
+              {/* Reset Button */}
+              <Button 
+                onClick={handleReset}
+                variant="outline"
+                disabled={callInProgress}
+              >
+                <RotateCcw className="w-4 h-4 mr-1" />
+                Reset
+              </Button>
+              
+              {/* Log Button */}
+              <Button 
+                onClick={handleLogResults}
+                variant="outline"
+                className="border-primary-500 text-primary-600 hover:bg-primary-50 dark:border-primary-400 dark:text-primary-400"
+              >
+                <ClipboardList className="w-4 h-4 mr-1" />
+                Log
+              </Button>
             </div>
           </div>
         </Card>
@@ -697,9 +824,12 @@ const LiveCallAssistance: React.FC = () => {
                 <Clock className="w-4 h-4" />
               </button>
               <div className="flex-1" />
-              <div className="relative">
+              <div className="relative" data-export-menu>
                 <button
-                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowExportMenu(!showExportMenu);
+                  }}
                   disabled={!callNotes}
                   className="p-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50 text-sm flex items-center gap-1"
                   title="Export Notes"
@@ -728,7 +858,7 @@ const LiveCallAssistance: React.FC = () => {
                       Export as Word (.docx)
                     </button>
                   </div>
-                )}
+                )})
               </div>
               <button
                 onClick={() => setCallNotes('')}
@@ -891,23 +1021,6 @@ Tips:
 
       {/* Right Column - Call Flow Checklist */}
       <div className="space-y-6">
-        {/* Progress Overview */}
-        <Card title="Call Flow Progress" subtitle={`${completedSteps} of ${callFlowSteps.length} steps completed`}>
-          <div className="space-y-4">
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <motion.div 
-                className="bg-primary-600 h-3 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercentage}%` }}
-                transition={{ duration: 0.5 }}
-              />
-            </div>
-            <div className="text-center text-sm text-gray-600 dark:text-gray-300">
-              {progressPercentage.toFixed(0)}% Complete
-            </div>
-          </div>
-        </Card>
-
         {/* Access Library Button - Moved above call flow progress */}
         {selectedContent.length > 0 && (
           <Card title="Content Library" subtitle="Access your scripts and talking points">
@@ -921,6 +1034,23 @@ Tips:
             </Button>
           </Card>
         )}
+
+        {/* Progress Overview */}
+        <Card title="Call Flow Progress" subtitle={`${completedSteps} of ${callFlowSteps.length} steps completed`}>
+          <div className="space-y-4">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+              <motion.div 
+                className="bg-primary-600 h-3 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+            <div className="text-center text-sm text-gray-600 dark:text-gray-300">
+              {progressPercentage.toFixed(0)}% Complete
+            </div>
+          </div>
+        </Card>
 
         {/* Call Flow Steps */}
         <Card title="Call Flow Checklist" subtitle="Follow this proven framework">
@@ -942,14 +1072,15 @@ Tips:
                 <div className="flex items-start gap-3">
                   <button
                     onClick={() => handleStepComplete(index)}
-                    disabled={step.completed || !isCallActive}
-                    className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    disabled={step.completed}
+                    className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer ${
                       step.completed
                         ? 'border-green-500 bg-green-500'
                         : index === currentStep && isCallActive
-                          ? 'border-primary-500 hover:bg-primary-50'
-                          : 'border-gray-300 dark:border-gray-600'
+                          ? 'border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                     }`}
+                    title={step.completed ? 'Completed' : 'Click to mark as completed'}
                   >
                     {step.completed && <CheckCircle className="w-4 h-4 text-white" />}
                     {!step.completed && index === currentStep && isCallActive && (

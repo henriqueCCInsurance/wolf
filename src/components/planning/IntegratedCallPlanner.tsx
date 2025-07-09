@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
@@ -32,6 +32,7 @@ import { useAppStore } from '@/store';
 import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
 import { EnhancedWebSearchService } from '@/services/enhancedWebSearch';
+import { NetlifyDatabaseService } from '@/services/netlifyDb';
 
 type PlanningMode = 'single-prospect' | 'imported-list' | 'crm-sync';
 
@@ -45,7 +46,9 @@ const IntegratedCallPlanner: React.FC = () => {
     dynamicIntelligence,
     setDynamicIntelligence,
     setCurrentModule,
-    advancedMode
+    advancedMode,
+    activeSequenceId,
+    callSequences
   } = useAppStore();
 
   const [mode, setMode] = useState<PlanningMode | null>(null);
@@ -71,6 +74,100 @@ const IntegratedCallPlanner: React.FC = () => {
 
   const sprintSizes = [1, 2, 3, 5, 8, 10, 15, 20];
 
+  // Load contacts from active sequence on component mount
+  useEffect(() => {
+    const loadSequenceContacts = async () => {
+      if (activeSequenceId) {
+        // Find the active sequence
+        const sequence = callSequences.find(seq => seq.id === activeSequenceId);
+        if (sequence) {
+          try {
+            // TODO: Get userId from authentication context
+            const userId = 'current-user';
+            
+            // Load contacts from database if they have IDs
+            if (sequence.contactIds && sequence.contactIds.length > 0) {
+              const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
+              
+              // Convert database contacts to UI contacts
+              const uiContacts = dbContacts.map(dbContact => ({
+                id: dbContact.id,
+                companyName: dbContact.company,
+                contactName: dbContact.name,
+                title: dbContact.title,
+                position: dbContact.title,
+                phone: dbContact.phone,
+                email: dbContact.email,
+                industry: dbContact.industry,
+                employeeCount: dbContact.employeeCount,
+                revenue: dbContact.revenue,
+                persona: dbContact.personaType as PersonaType,
+                status: dbContact.status,
+                source: sequence.mode === 'imported' ? 'csv' : sequence.mode === 'crm-sync' ? 'crm' : 'manual'
+              }));
+              
+              setContacts(uiContacts);
+              setSelectedContacts(new Set(uiContacts.map(c => c.id)));
+              setContactsLocked(true);
+              setShowGuideSection(true);
+              setCurrentSequence(sequence);
+              
+              // Set mode based on sequence mode
+              if (sequence.mode === 'imported') {
+                setMode('imported-list');
+              } else if (sequence.mode === 'crm-sync') {
+                setMode('crm-sync');
+              } else {
+                setMode('single-prospect');
+              }
+            } else if (sequence.contacts && sequence.contacts.length > 0) {
+              // Fallback to legacy contacts array
+              setContacts(sequence.contacts);
+              setSelectedContacts(new Set(sequence.contacts.map(c => c.id)));
+              setContactsLocked(true);
+              setShowGuideSection(true);
+              setCurrentSequence(sequence);
+              setMode(sequence.mode === 'imported' ? 'imported-list' : 
+                     sequence.mode === 'crm-sync' ? 'crm-sync' : 'single-prospect');
+            }
+          } catch (error) {
+            console.error('Error loading contacts from database:', error);
+          }
+        }
+      }
+      
+      // Check for legacy localStorage contacts (for backward compatibility)
+      const savedLockedContacts = localStorage.getItem('wolf-den-locked-contacts');
+      if (savedLockedContacts && !activeSequenceId) {
+        try {
+          const contacts = JSON.parse(savedLockedContacts);
+          if (Array.isArray(contacts) && contacts.length > 0) {
+            setContacts(contacts);
+            setSelectedContacts(new Set(contacts.map(c => c.id)));
+            setContactsLocked(true);
+            setShowGuideSection(true);
+            
+            // Set mode based on contact source
+            if (contacts.length > 0) {
+              const firstContact = contacts[0];
+              if (firstContact.source === 'csv') {
+                setMode('imported-list');
+              } else if (firstContact.source === 'crm') {
+                setMode('crm-sync');
+              } else {
+                setMode('single-prospect');
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing locked contacts:', error);
+        }
+      }
+    };
+    
+    loadSequenceContacts();
+  }, [activeSequenceId, callSequences]);
+
   const handleModeChange = (newMode: PlanningMode) => {
     setMode(newMode);
     setContacts([]);
@@ -80,10 +177,14 @@ const IntegratedCallPlanner: React.FC = () => {
     setShowGuideSection(false);
     setGatheringIntelligence(false);
     
-    // Clear any locked contacts from previous sessions
-    localStorage.removeItem('wolf-den-locked-contacts');
-    localStorage.removeItem('wolf-den-company-intelligence');
-    localStorage.removeItem('wolf-den-intelligence-loading');
+    // Only clear locked contacts if explicitly switching modes (not on initial load)
+    if (mode !== null) {
+      localStorage.removeItem('wolf-den-locked-contacts');
+      localStorage.removeItem('wolf-den-company-intelligence');
+      localStorage.removeItem('wolf-den-intelligence-loading');
+      // Clear active sequence when switching modes
+      useAppStore.getState().setActiveSequence(null);
+    }
     
     // If single prospect mode, prepare for Planner flow
     if (newMode === 'single-prospect') {
@@ -271,12 +372,64 @@ const IntegratedCallPlanner: React.FC = () => {
     setContactsLocked(true);
     setGatheringIntelligence(true);
     
-    // Save locked contacts to localStorage
-    const contactsToLock = contacts.filter(c => selectedContacts.has(c.id));
-    localStorage.setItem('wolf-den-locked-contacts', JSON.stringify(contactsToLock));
-    
-    // Trigger real-time company intelligence gathering
     try {
+      // Get selected contacts
+      const contactsToLock = contacts.filter(c => selectedContacts.has(c.id));
+      
+      // TODO: Get userId from authentication context
+      const userId = 'current-user';
+      
+      // If we don't have an active sequence, create one
+      if (!currentSequence) {
+        // Save contacts to database if they don't have IDs yet
+        const savedContacts = await Promise.all(
+          contactsToLock.map(async (contact) => {
+            if (!contact.id || contact.id.startsWith('temp-')) {
+              // Create new contact in database
+              const dbContact = await NetlifyDatabaseService.contactService.create({
+                userId,
+                company: contact.companyName,
+                name: contact.contactName,
+                title: contact.position || contact.title,
+                phone: contact.phone,
+                email: contact.email,
+                industry: contact.industry,
+                employeeCount: contact.employeeCount,
+                revenue: contact.revenue,
+                personaType: contact.persona,
+                status: 'new',
+                tags: [],
+                notes: contact.notes
+              });
+              return dbContact;
+            }
+            // Contact already exists, just return it
+            return contact;
+          })
+        );
+        
+        // Create a new sequence with these contacts
+        const sequence = await NetlifyDatabaseService.callSequenceService.create({
+          userId,
+          name: `Planning Session ${new Date().toLocaleDateString()}`,
+          contacts: savedContacts.map(c => ({
+            id: c.id || c.id,
+            companyName: c.company || c.companyName,
+            contactName: c.name || c.contactName,
+            status: 'pending'
+          })),
+          contactIds: savedContacts.map(c => c.id || c.id),
+          totalContacts: savedContacts.length,
+          status: 'planned',
+          sprintSize: selectedSprintSize,
+          mode: mode === 'imported-list' ? 'imported' : mode === 'crm-sync' ? 'crm-sync' : 'standalone'
+        });
+        
+        setCurrentSequence(sequence);
+        useAppStore.getState().setActiveSequence(sequence.id);
+      }
+      
+      // Trigger real-time company intelligence gathering
       const { CompanyIntelligenceService } = await import('@/services/companyIntelligence');
       
       // Convert contacts to prospects for intelligence gathering
@@ -331,8 +484,36 @@ const IntegratedCallPlanner: React.FC = () => {
   };
 
   const handleProceedToGuide = () => {
-    // Save current state before navigating
-    setCurrentModule('battle-card');
+    // In advanced mode, hide guide section to show intelligence gathering steps
+    if (advancedMode) {
+      setShowGuideSection(false);
+    } else {
+      // In simple mode, navigate directly to battle card
+      // For import mode, set the first locked contact as the current prospect
+      if (mode === 'imported-list' && contactsLocked) {
+        const lockedContacts = localStorage.getItem('wolf-den-locked-contacts');
+        if (lockedContacts) {
+          try {
+            const contacts = JSON.parse(lockedContacts);
+            if (contacts.length > 0) {
+              const firstContact = contacts[0];
+              setProspect({
+                companyName: firstContact.companyName,
+                contactName: firstContact.contactName,
+                contactPhone: firstContact.phone || '',
+                contactPosition: '',
+                contactEmail: firstContact.email || '',
+                industry: firstContact.industry || '',
+                persona: firstContact.persona || 'cost-conscious-employer'
+              });
+            }
+          } catch (error) {
+            console.error('Error parsing locked contacts:', error);
+          }
+        }
+      }
+      setCurrentModule('battle-card');
+    }
   };
 
   const handleContactSelect = (contactId: string) => {
@@ -372,6 +553,9 @@ const IntegratedCallPlanner: React.FC = () => {
       id: Date.now().toString(),
       companyName: '',
       contactName: '',
+      email: '',
+      phone: '',
+      position: '',
       industry: '',
       source: 'manual',
       status: 'pending'
@@ -1021,58 +1205,133 @@ const IntegratedCallPlanner: React.FC = () => {
               )}
             </div>
             
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="space-y-3 max-h-96 overflow-y-auto">
               {contacts.map((contact) => (
                 <div 
                   key={contact.id}
-                  className={`flex items-center gap-4 p-3 border rounded-lg ${
+                  className={`p-4 border rounded-lg transition-all ${
                     selectedContacts.has(contact.id) 
-                      ? 'border-primary-300 bg-primary-50' 
-                      : 'border-gray-200'
+                      ? 'border-primary-300 bg-primary-50 shadow-sm' 
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedContacts.has(contact.id)}
-                    onChange={() => handleContactSelect(contact.id)}
-                    disabled={contactsLocked}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
-                  />
-                  
-                  <div className="flex-1 grid grid-cols-3 gap-3">
+                  <div className="flex items-start gap-4">
                     <input
-                      type="text"
-                      placeholder="Company name"
-                      value={contact.companyName}
-                      onChange={(e) => updateContact(contact.id, { companyName: e.target.value })}
+                      type="checkbox"
+                      checked={selectedContacts.has(contact.id)}
+                      onChange={() => handleContactSelect(contact.id)}
                       disabled={contactsLocked}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
+                      className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
                     />
-                    <input
-                      type="text"
-                      placeholder="Contact name"
-                      value={contact.contactName}
-                      onChange={(e) => updateContact(contact.id, { contactName: e.target.value })}
-                      disabled={contactsLocked}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Industry"
-                      value={contact.industry}
-                      onChange={(e) => updateContact(contact.id, { industry: e.target.value })}
-                      disabled={contactsLocked}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
-                    />
+                    
+                    <div className="flex-1 space-y-3">
+                      {/* Row 1: Company and Contact Name */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Company Name</label>
+                          <input
+                            type="text"
+                            placeholder="Company name"
+                            value={contact.companyName}
+                            onChange={(e) => updateContact(contact.id, { companyName: e.target.value })}
+                            disabled={contactsLocked}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Contact Name</label>
+                          <input
+                            type="text"
+                            placeholder="Contact name"
+                            value={contact.contactName}
+                            onChange={(e) => updateContact(contact.id, { contactName: e.target.value })}
+                            disabled={contactsLocked}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Row 2: Industry and Position */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Industry</label>
+                          <input
+                            type="text"
+                            placeholder="Industry"
+                            value={contact.industry || ''}
+                            onChange={(e) => updateContact(contact.id, { industry: e.target.value })}
+                            disabled={contactsLocked}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Position/Title</label>
+                          <input
+                            type="text"
+                            placeholder="Position/Title"
+                            value={contact.position || ''}
+                            onChange={(e) => updateContact(contact.id, { position: e.target.value })}
+                            disabled={contactsLocked}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Row 3: Phone and Email */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Phone Number</label>
+                          <input
+                            type="tel"
+                            placeholder="Phone number"
+                            value={contact.phone || ''}
+                            onChange={(e) => updateContact(contact.id, { phone: e.target.value })}
+                            disabled={contactsLocked}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Email Address</label>
+                          <input
+                            type="email"
+                            placeholder="Email address"
+                            value={contact.email || ''}
+                            onChange={(e) => updateContact(contact.id, { email: e.target.value })}
+                            disabled={contactsLocked}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Contact Status Badge */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            contact.status === 'success' ? 'bg-green-100 text-green-800' :
+                            contact.status === 'called' ? 'bg-blue-100 text-blue-800' :
+                            contact.status === 'failed' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {contact.status}
+                          </span>
+                          {contact.source && (
+                            <span className="text-xs text-gray-500">
+                              Source: {contact.source}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <button
+                          onClick={() => removeContact(contact.id)}
+                          disabled={contactsLocked}
+                          className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1 rounded-md hover:bg-red-50 transition-colors"
+                          title="Remove contact"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <button
-                    onClick={() => removeContact(contact.id)}
-                    disabled={contactsLocked}
-                    className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
               ))}
             </div>
@@ -1268,36 +1527,85 @@ const IntegratedCallPlanner: React.FC = () => {
             </div>
 
             {/* Contact List */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {currentSequence.contacts.map((contact, index) => (
-                <div key={contact.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                    {index + 1}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{contact.companyName}</div>
-                    <div className="text-sm text-gray-600">
-                      {contact.contactName} • {contact.industry}
-                      {contact.phone && ` • ${contact.phone}`}
+                <div key={contact.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">
+                      {index + 1}
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {contact.address && (
-                      <div className="text-xs text-gray-500 flex items-center">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        Location
-                      </div>
-                    )}
                     
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      contact.status === 'success' ? 'bg-green-100 text-green-800' :
-                      contact.status === 'called' ? 'bg-blue-100 text-blue-800' :
-                      contact.status === 'failed' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {contact.status}
+                    <div className="flex-1 min-w-0">
+                      {/* Primary Info */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-gray-900 text-lg">{contact.companyName}</h4>
+                          <p className="text-primary-600 font-medium">{contact.contactName}</p>
+                        </div>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          contact.status === 'success' ? 'bg-green-100 text-green-800' :
+                          contact.status === 'called' ? 'bg-blue-100 text-blue-800' :
+                          contact.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {contact.status}
+                        </div>
+                      </div>
+                      
+                      {/* Contact Details Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                        {contact.industry && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Industry:</span>
+                            <span className="font-medium text-gray-900">{contact.industry}</span>
+                          </div>
+                        )}
+                        
+                        {contact.position && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Position:</span>
+                            <span className="font-medium text-gray-900">{contact.position}</span>
+                          </div>
+                        )}
+                        
+                        {contact.phone && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Phone:</span>
+                            <span className="font-medium text-gray-900">{contact.phone}</span>
+                          </div>
+                        )}
+                        
+                        {contact.email && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Email:</span>
+                            <span className="font-medium text-gray-900 truncate">{contact.email}</span>
+                          </div>
+                        )}
+                        
+                        {contact.address && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3 h-3 text-gray-500" />
+                            <span className="text-gray-500">Address:</span>
+                            <span className="font-medium text-gray-900 truncate">{contact.address}</span>
+                          </div>
+                        )}
+                        
+                        {contact.source && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">Source:</span>
+                            <span className="font-medium text-gray-900">{contact.source}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Persona Badge */}
+                      {contact.persona && (
+                        <div className="mt-2">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {contact.persona.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

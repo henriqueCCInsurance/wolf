@@ -55,6 +55,7 @@ export interface CallLog {
   // New fields for sequence integration
   sequenceId?: string;
   contactId?: string;
+  battleCardId?: string;
   startTime?: Date;
   endTime?: Date;
   attemptNumber?: number;
@@ -132,6 +133,7 @@ export interface Contact {
   contactName: string;
   email?: string;
   phone?: string;
+  position?: string;
   industry: string;
   persona?: PersonaType;
   address?: string;

@@ -1,6 +1,6 @@
 import { db } from '@/db';
-import { users, callLogs, battleCards, callSequences, type CallLog, type BattleCard, type CallSequence } from '@/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { users, callLogs, battleCards, callSequences, contacts, userPreferences, companyIntelligence, type CallLog, type BattleCard, type CallSequence, type Contact, type NewContact, type UserPreferences, type CompanyIntelligence } from '@/db/schema';
+import { eq, desc, and, inArray, or, ilike } from 'drizzle-orm';
 
 // User operations
 export const userService = {
@@ -152,11 +152,191 @@ export const analyticsService = {
   }
 };
 
+// Contact operations
+export const contactService = {
+  async create(data: Omit<NewContact, 'id' | 'createdAt' | 'updatedAt'>) {
+    const [contact] = await db.insert(contacts).values(data).returning();
+    return contact;
+  },
+
+  async bulkCreate(userId: string, contactsData: Omit<NewContact, 'id' | 'userId' | 'createdAt' | 'updatedAt'>[]) {
+    const contactsToInsert = contactsData.map(c => ({ ...c, userId }));
+    return db.insert(contacts).values(contactsToInsert).returning();
+  },
+
+  async getByUser(userId: string, filters?: {
+    status?: string;
+    personaType?: string;
+    industry?: string;
+    search?: string;
+  }) {
+    let query = db.select().from(contacts).where(eq(contacts.userId, userId));
+
+    if (filters) {
+      const conditions = [eq(contacts.userId, userId)];
+      
+      if (filters.status) {
+        conditions.push(eq(contacts.status, filters.status as any));
+      }
+      if (filters.personaType) {
+        conditions.push(eq(contacts.personaType, filters.personaType));
+      }
+      if (filters.industry) {
+        conditions.push(eq(contacts.industry, filters.industry));
+      }
+      if (filters.search) {
+        conditions.push(
+          or(
+            ilike(contacts.name, `%${filters.search}%`),
+            ilike(contacts.company, `%${filters.search}%`),
+            ilike(contacts.title, `%${filters.search}%`)
+          )
+        );
+      }
+      
+      query = db.select().from(contacts).where(and(...conditions));
+    }
+
+    return query.orderBy(desc(contacts.createdAt));
+  },
+
+  async getByIds(contactIds: string[]) {
+    if (!contactIds.length) return [];
+    return db.select()
+      .from(contacts)
+      .where(inArray(contacts.id, contactIds));
+  },
+
+  async getById(id: string, userId: string) {
+    const [contact] = await db.select()
+      .from(contacts)
+      .where(and(
+        eq(contacts.id, id),
+        eq(contacts.userId, userId)
+      ));
+    return contact;
+  },
+
+  async update(id: string, userId: string, data: Partial<Contact>) {
+    const { id: _, createdAt, updatedAt, ...updateData } = data;
+    await db.update(contacts)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(and(
+        eq(contacts.id, id),
+        eq(contacts.userId, userId)
+      ));
+  },
+
+  async updateStatus(id: string, userId: string, status: Contact['status']) {
+    await db.update(contacts)
+      .set({ status, updatedAt: new Date() })
+      .where(and(
+        eq(contacts.id, id),
+        eq(contacts.userId, userId)
+      ));
+  },
+
+  async delete(id: string, userId: string) {
+    await db.delete(contacts)
+      .where(and(
+        eq(contacts.id, id),
+        eq(contacts.userId, userId)
+      ));
+  }
+};
+
+// User preferences operations
+export const userPreferencesService = {
+  async getOrCreate(userId: string) {
+    const [existing] = await db.select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
+    
+    if (existing) return existing;
+    
+    // Create default preferences
+    const [newPrefs] = await db.insert(userPreferences)
+      .values({ userId })
+      .returning();
+    
+    return newPrefs;
+  },
+
+  async update(userId: string, data: Partial<UserPreferences>) {
+    const { id, createdAt, updatedAt, ...updateData } = data;
+    
+    await db.update(userPreferences)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(userPreferences.userId, userId));
+  },
+
+  async getTheme(userId: string) {
+    const prefs = await this.getOrCreate(userId);
+    return prefs.theme;
+  },
+
+  async setTheme(userId: string, theme: 'light' | 'dark') {
+    await this.update(userId, { theme });
+  }
+};
+
+// Company intelligence operations
+export const companyIntelligenceService = {
+  async get(companyName: string) {
+    const [intel] = await db.select()
+      .from(companyIntelligence)
+      .where(eq(companyIntelligence.companyName, companyName));
+    
+    // Check if expired
+    if (intel && intel.expiresAt && new Date(intel.expiresAt) < new Date()) {
+      await this.delete(companyName);
+      return null;
+    }
+    
+    return intel;
+  },
+
+  async set(data: Omit<CompanyIntelligence, 'id' | 'createdAt' | 'updatedAt'>) {
+    const existing = await this.get(data.companyName);
+    
+    if (existing) {
+      await db.update(companyIntelligence)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(companyIntelligence.companyName, data.companyName));
+    } else {
+      await db.insert(companyIntelligence).values(data);
+    }
+  },
+
+  async delete(companyName: string) {
+    await db.delete(companyIntelligence)
+      .where(eq(companyIntelligence.companyName, companyName));
+  },
+
+  async cleanup() {
+    // Delete expired entries
+    const now = new Date();
+    // Note: This would need proper SQL comparison for timestamp
+    // For now, we'll fetch and filter in memory
+    const allIntel = await db.select().from(companyIntelligence);
+    const expired = allIntel.filter(intel => 
+      intel.expiresAt && new Date(intel.expiresAt) < now
+    );
+    
+    for (const intel of expired) {
+      await this.delete(intel.companyName);
+    }
+  }
+};
+
 // Export a unified service object
 export const NetlifyDatabaseService = {
   userService,
   callLogService,
   battleCardService,
   callSequenceService,
-  analyticsService
+  analyticsService,
+  contactService,
+  userPreferencesService,
+  companyIntelligenceService
 };

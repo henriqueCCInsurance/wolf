@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Phone, Clock, CheckCircle, ArrowLeft, Target, MessageSquare, Lightbulb, ExternalLink } from 'lucide-react';
 import Button from '@/components/common/Button';
+import ClickablePhone from '@/components/common/ClickablePhone';
 import { useAppStore } from '@/store';
 import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
@@ -31,21 +32,21 @@ const SimplifiedCallGuide: React.FC = () => {
   const selectedIndustry = industries.find(i => i.id === prospect.industry);
   const personaContent = contentLibrary.filter((c: any) => c.persona === prospect.persona);
 
-  const handleStartCall = () => {
+  const handleStartCall = async () => {
     if (!prospect?.contactPhone) {
       alert('No phone number available for this contact');
       return;
     }
 
     // Initiate Zoom Phone call
-    const callSuccess = zoomPhoneService.initiateCall({
+    const callSuccess = await zoomPhoneService.initiateCall({
       phoneNumber: prospect.contactPhone,
       contactName: prospect.contactName,
       companyName: prospect.companyName,
       leadId: `${prospect.companyName}-${prospect.contactName}`
     });
 
-    if (callSuccess) {
+    if (callSuccess.success) {
       setCallStarted(true);
       const timer = setInterval(() => {
         setCallDuration(prev => prev + 1);
@@ -89,7 +90,13 @@ const SimplifiedCallGuide: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">Ready to Call {prospect.contactName}?</h1>
             <p className="text-gray-600">{prospect.companyName} • {selectedIndustry?.name}</p>
             {prospect.contactPhone && (
-              <p className="text-sm text-gray-500 font-mono">{prospect.contactPhone}</p>
+              <div className="mt-1">
+                <ClickablePhone 
+                  phoneNumber={prospect.contactPhone}
+                  contactName={prospect.contactName}
+                  companyName={prospect.companyName}
+                />
+              </div>
             )}
           </div>
           

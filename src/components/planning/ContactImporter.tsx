@@ -5,6 +5,8 @@ import Papa from 'papaparse';
 import { Contact } from '@/types';
 import Button from '@/components/common/Button';
 import { useAppStore } from '@/store';
+import { NetlifyDatabaseService } from '@/services/netlifyDb';
+import { CompanyIntelligenceService } from '@/services/companyIntelligence';
 
 interface ContactImporterProps {
   isOpen: boolean;
@@ -36,6 +38,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
     { key: 'companyName', label: 'Company Name', required: true },
     { key: 'contactName', label: 'Contact Name', required: true },
     { key: 'industry', label: 'Industry', required: true },
+    { key: 'position', label: 'Position/Title', required: false },
     { key: 'email', label: 'Email', required: false },
     { key: 'phone', label: 'Phone', required: false },
     { key: 'address', label: 'Address', required: false },
@@ -121,6 +124,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
           if (lowerHeader.includes('company') && !autoMappings.companyName) autoMappings.companyName = header;
           if ((lowerHeader.includes('contact') || lowerHeader.includes('name')) && !lowerHeader.includes('company') && !autoMappings.contactName) autoMappings.contactName = header;
           if (lowerHeader.includes('industry') && !autoMappings.industry) autoMappings.industry = header;
+          if ((lowerHeader.includes('position') || lowerHeader.includes('title') || lowerHeader.includes('job')) && !autoMappings.position) autoMappings.position = header;
           if (lowerHeader.includes('email') && !autoMappings.email) autoMappings.email = header;
           if (lowerHeader.includes('phone') && !autoMappings.phone) autoMappings.phone = header;
           if (lowerHeader.includes('address') && !autoMappings.address) autoMappings.address = header;
@@ -175,6 +179,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
         companyName: mappings.companyName ? row[mappings.companyName]?.trim() || '' : '',
         contactName: mappings.contactName ? row[mappings.contactName]?.trim() || '' : '',
         industry: mappings.industry ? row[mappings.industry]?.trim() || '' : '',
+        position: mappings.position ? row[mappings.position]?.trim() : undefined,
         email: mappings.email ? row[mappings.email]?.trim() : undefined,
         phone: phone,
         address: mappings.address ? row[mappings.address]?.trim() : undefined,
@@ -221,42 +226,82 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
     setContactsLocked(true);
     setGatheringIntelligence(true);
     
-    // Lock contacts for guided workflow
-    const contacts = processContacts();
-    localStorage.setItem('wolf-den-locked-contacts', JSON.stringify(contacts));
-    
-    // Trigger real-time company intelligence gathering
     try {
-      const { CompanyIntelligenceService } = await import('@/services/companyIntelligence');
+      // Process contacts for database
+      const contacts = processContacts();
       
-      // Start gathering intelligence for all contacts in the background
-      // Cast contacts to prospects for intelligence gathering
+      // TODO: Get userId from authentication context
+      const userId = 'current-user'; // This should come from auth context
+      
+      // Save contacts to database
+      const savedContacts = await NetlifyDatabaseService.contactService.bulkCreate(userId, contacts.map(contact => ({
+        company: contact.companyName,
+        name: contact.contactName,
+        title: contact.position || contact.title,
+        phone: contact.phone,
+        email: contact.email,
+        industry: contact.industry,
+        employeeCount: contact.employeeCount,
+        revenue: contact.revenue,
+        personaType: contact.persona,
+        status: 'new',
+        tags: [],
+        notes: contact.notes
+      })));
+      
+      // Create a call sequence for these contacts
+      const sequence = await NetlifyDatabaseService.callSequenceService.create({
+        userId,
+        name: `Import ${new Date().toLocaleDateString()}`,
+        contacts: savedContacts.map(c => ({
+          id: c.id,
+          companyName: c.company,
+          contactName: c.name,
+          status: 'pending'
+        })),
+        contactIds: savedContacts.map(c => c.id),
+        totalContacts: savedContacts.length,
+        status: 'planned',
+        sprintSize: Math.min(savedContacts.length, 25),
+        mode: 'imported'
+      });
+      
+      // Store sequence ID in app store for navigation
+      useAppStore.getState().setActiveSequence(sequence.id);
+      
+      // Gather intelligence for all contacts in the background
       const contactsAsProspects = contacts.map(contact => ({
         ...contact,
         persona: contact.persona || 'cost-conscious-employer' as const
       }));
-      const intelligencePromise = CompanyIntelligenceService.getMultipleCompanyIntelligence(contactsAsProspects);
       
-      // Store the promise for later use
-      localStorage.setItem('wolf-den-intelligence-loading', 'true');
-      
-      // Process intelligence in background
-      intelligencePromise.then(intelligence => {
-        localStorage.setItem('wolf-den-company-intelligence', JSON.stringify(Object.fromEntries(intelligence)));
-        localStorage.removeItem('wolf-den-intelligence-loading');
-        setGatheringIntelligence(false);
-      }).catch(error => {
-        console.error('Error gathering company intelligence:', error);
-        localStorage.removeItem('wolf-den-intelligence-loading');
-        setGatheringIntelligence(false);
-      });
+      CompanyIntelligenceService.getMultipleCompanyIntelligence(contactsAsProspects)
+        .then(async (intelligence) => {
+          // Save intelligence to database cache
+          for (const [company, intel] of intelligence) {
+            await NetlifyDatabaseService.companyIntelligenceService.set({
+              companyName: company,
+              intelligenceData: intel,
+              source: 'web-search',
+              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+            });
+          }
+          setGatheringIntelligence(false);
+        })
+        .catch(error => {
+          console.error('Error gathering company intelligence:', error);
+          setGatheringIntelligence(false);
+        });
       
     } catch (error) {
-      console.error('Error loading CompanyIntelligenceService:', error);
+      console.error('Error saving contacts to database:', error);
+      setErrors([`Failed to save contacts: ${error.message}`]);
       setGatheringIntelligence(false);
+      setContactsLocked(false);
+      return;
     }
     
-    // Set guided mode in store if available
+    // Navigate to call planner
     onClose();
     setCurrentModule('call-planner');
   };
@@ -266,6 +311,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
       {
         'Company Name': 'Acme Corporation',
         'Contact Name': 'John Smith',
+        'Position': 'HR Director',
         'Industry': 'Technology',
         'Email': 'john.smith@acme.com',
         'Phone': '+1-555-0123',
@@ -274,6 +320,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
       {
         'Company Name': 'Global Industries',
         'Contact Name': 'Sarah Johnson',
+        'Position': 'CFO',
         'Industry': 'Manufacturing',
         'Email': 'sarah.j@global.com',
         'Phone': '+1-555-0124',
@@ -501,7 +548,13 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                             Contact
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Position
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Industry
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Phone
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Email
@@ -513,7 +566,9 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                           <tr key={contact.id}>
                             <td className="px-4 py-3 text-sm text-gray-900">{contact.companyName}</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{contact.contactName}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{contact.position || 'N/A'}</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{contact.industry}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{contact.phone || 'N/A'}</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{contact.email || 'N/A'}</td>
                           </tr>
                         ))}

@@ -1,20 +1,180 @@
-import React from 'react';
-import { Download, Printer, ArrowLeft, FileText, Target, TrendingUp, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Printer, ArrowLeft, FileText, Target, TrendingUp, Phone, ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
 import EnhancedContentLibrary from '@/components/callguide/EnhancedContentLibrary';
 import LiveIndustryIntelligence from '@/components/intelligence/LiveIndustryIntelligence';
+import ClickablePhone from '@/components/common/ClickablePhone';
 import { useAppStore } from '@/store';
 import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
 import { callObjectives } from '@/data/content';
 import { getClosingsByPersonaAndType, getSuccessRateCategory } from '@/data/strategicClosings';
+import { Contact, PersonaType } from '@/types';
+import { NetlifyDatabaseService } from '@/services/netlifyDb';
 
 const CallGuide: React.FC = () => {
-  const { prospect, selectedContent, setCurrentModule, addBattleCard } = useAppStore();
+  const { prospect, selectedContent, setCurrentModule, addBattleCard, setProspect, activeSequenceId, callSequences } = useAppStore();
+  const [lockedContacts, setLockedContacts] = useState<Contact[]>([]);
+  const [currentContactIndex, setCurrentContactIndex] = useState(0);
+  const [isMultiContactMode, setIsMultiContactMode] = useState(false);
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
-  if (!prospect) {
+  // Load contacts from active sequence or localStorage on component mount
+  useEffect(() => {
+    const loadContacts = async () => {
+      setLoadingContacts(true);
+      
+      try {
+        // First try to load from active sequence
+        if (activeSequenceId) {
+          const sequence = callSequences.find(seq => seq.id === activeSequenceId);
+          if (sequence) {
+            // TODO: Get userId from authentication context
+            const userId = 'current-user';
+            
+            // Load contacts from database if they have IDs
+            if (sequence.contactIds && sequence.contactIds.length > 0) {
+              const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
+              
+              // Convert database contacts to UI contacts
+              const uiContacts = dbContacts.map(dbContact => ({
+                id: dbContact.id,
+                companyName: dbContact.company,
+                contactName: dbContact.name,
+                title: dbContact.title,
+                position: dbContact.title,
+                phone: dbContact.phone,
+                email: dbContact.email,
+                industry: dbContact.industry,
+                employeeCount: dbContact.employeeCount,
+                revenue: dbContact.revenue,
+                persona: dbContact.personaType as PersonaType,
+                status: dbContact.status
+              }));
+              
+              setLockedContacts(uiContacts);
+              setIsMultiContactMode(uiContacts.length > 1);
+              
+              // If no prospect is set but we have contacts, set the first one
+              if (!prospect && uiContacts.length > 0) {
+                const firstContact = uiContacts[0];
+                setProspect({
+                  companyName: firstContact.companyName,
+                  contactName: firstContact.contactName,
+                  contactPhone: firstContact.phone || '',
+                  contactPosition: firstContact.position || '',
+                  contactEmail: firstContact.email || '',
+                  industry: firstContact.industry || '',
+                  persona: firstContact.persona || 'cost-conscious-employer'
+                });
+              }
+              
+              setLoadingContacts(false);
+              return;
+            }
+          }
+        }
+        
+        // Fallback to localStorage for backward compatibility
+        const savedLockedContacts = localStorage.getItem('wolf-den-locked-contacts');
+        if (savedLockedContacts) {
+          const contacts = JSON.parse(savedLockedContacts);
+          if (Array.isArray(contacts) && contacts.length > 0) {
+            setLockedContacts(contacts);
+            setIsMultiContactMode(contacts.length > 1);
+            
+            // If no prospect is set but we have locked contacts, set the first one
+            if (!prospect && contacts.length > 0) {
+              const firstContact = contacts[0];
+              setProspect({
+                companyName: firstContact.companyName,
+                contactName: firstContact.contactName,
+                contactPhone: firstContact.phone || '',
+                contactPosition: '',
+                contactEmail: firstContact.email || '',
+                industry: firstContact.industry || '',
+                persona: firstContact.persona || 'cost-conscious-employer'
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading contacts:', error);
+      } finally {
+        setLoadingContacts(false);
+      }
+    };
+    
+    loadContacts();
+  }, [activeSequenceId, callSequences, prospect, setProspect]);
+
+  const getCurrentContact = () => {
+    if (isMultiContactMode && lockedContacts.length > 0) {
+      return lockedContacts[currentContactIndex];
+    }
+    return null;
+  };
+
+  const getCurrentProspect = () => {
+    if (isMultiContactMode) {
+      const currentContact = getCurrentContact();
+      if (currentContact) {
+        return {
+          companyName: currentContact.companyName,
+          contactName: currentContact.contactName,
+          contactPhone: currentContact.phone || '',
+          contactPosition: '',
+          contactEmail: currentContact.email || '',
+          industry: currentContact.industry || '',
+          persona: currentContact.persona || 'cost-conscious-employer'
+        };
+      }
+    }
+    return prospect;
+  };
+
+  const handleNavigateContact = (direction: 'prev' | 'next') => {
+    if (!isMultiContactMode) return;
+    
+    const newIndex = direction === 'prev' 
+      ? Math.max(0, currentContactIndex - 1)
+      : Math.min(lockedContacts.length - 1, currentContactIndex + 1);
+    
+    setCurrentContactIndex(newIndex);
+    
+    // Update the prospect in the store to reflect the current contact
+    const newContact = lockedContacts[newIndex];
+    setProspect({
+      companyName: newContact.companyName,
+      contactName: newContact.contactName,
+      contactPhone: newContact.phone || '',
+      contactPosition: '',
+      contactEmail: newContact.email || '',
+      industry: newContact.industry || '',
+      persona: newContact.persona || 'cost-conscious-employer'
+    });
+  };
+
+  const handleUnlockContacts = () => {
+    // Clear from localStorage (for backward compatibility)
+    localStorage.removeItem('wolf-den-locked-contacts');
+    localStorage.removeItem('wolf-den-company-intelligence');
+    localStorage.removeItem('wolf-den-intelligence-loading');
+    
+    // Clear active sequence
+    useAppStore.getState().setActiveSequence(null);
+    
+    // Reset local state
+    setLockedContacts([]);
+    setIsMultiContactMode(false);
+    setCurrentContactIndex(0);
+  };
+
+  const currentProspect = getCurrentProspect();
+
+  if (!currentProspect) {
     return (
       <div className="text-center py-12">
         <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -28,8 +188,8 @@ const CallGuide: React.FC = () => {
     );
   }
 
-  const selectedPersona = personas.find(p => p.id === prospect.persona);
-  const selectedIndustry = industries.find(i => i.id === prospect.industry);
+  const selectedPersona = personas.find(p => p.id === currentProspect.persona);
+  const selectedIndustry = industries.find(i => i.id === currentProspect.industry);
 
   const handlePrint = () => {
     window.print();
@@ -38,13 +198,19 @@ const CallGuide: React.FC = () => {
   const handleGeneratePDF = () => {
     // Create call guide data
     const callGuide = {
-      lead: prospect, // Updated to use lead instead of prospect
+      lead: currentProspect, // Updated to use current prospect (could be from locked contacts)
       selectedContent,
       dynamicIntelligence: [], // Will be populated when web search is implemented
       generatedAt: new Date()
     };
     
+    // Add battle card to store and database
     addBattleCard(callGuide);
+    
+    // If we have a contact ID, update the battle card in database
+    if (isMultiContactMode && lockedContacts[currentContactIndex]?.id) {
+      // The addBattleCard function in store already handles database save
+    }
     
     // For now, just trigger print dialog
     // TODO: Implement PDF generation with jsPDF
@@ -58,7 +224,7 @@ const CallGuide: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Guide Generator</h1>
           <p className="text-lg text-gray-600">
-            Prepare your battle card and reference materials for {prospect.companyName}
+            Prepare your battle card and reference materials for {currentProspect.companyName}
           </p>
         </div>
         <div className="flex space-x-3">
@@ -80,6 +246,60 @@ const CallGuide: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Multi-Contact Navigation */}
+      {isMultiContactMode && (
+        <Card 
+          title="Contact Navigation" 
+          subtitle={`Viewing ${currentContactIndex + 1} of ${lockedContacts.length} locked contacts`}
+          className="bg-purple-50 border-purple-200"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center text-purple-600">
+                <Lock className="w-4 h-4 mr-2" />
+                <span className="font-medium">Locked Contact Mode</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  onClick={() => handleNavigateContact('prev')}
+                  disabled={currentContactIndex === 0}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm text-gray-600">
+                  {currentContactIndex + 1} of {lockedContacts.length}
+                </span>
+                <Button
+                  onClick={() => handleNavigateContact('next')}
+                  disabled={currentContactIndex === lockedContacts.length - 1}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">Current:</span> {currentProspect.companyName}
+              </div>
+              <Button
+                onClick={handleUnlockContacts}
+                variant="outline"
+                size="sm"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50"
+              >
+                <Unlock className="w-3 h-3 mr-1.5" />
+                Unlock All
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Call Objectives */}
       <Card title="Call Objectives" subtitle="Your success outcomes ranked by priority">
@@ -137,7 +357,7 @@ const CallGuide: React.FC = () => {
         defaultExpanded={false}
         priority="medium"
       >
-        <LiveIndustryIntelligence industry={prospect.industry} />
+        <LiveIndustryIntelligence industry={currentProspect.industry} />
       </CollapsibleSection>
 
       {/* Strategic Closings */}
@@ -155,7 +375,7 @@ const CallGuide: React.FC = () => {
               Meeting Booking Closes
             </h4>
             <div className="space-y-3">
-              {getClosingsByPersonaAndType(prospect.persona, 'meeting-booking').slice(0, 2).map((closing) => {
+              {getClosingsByPersonaAndType(currentProspect.persona, 'meeting-booking').slice(0, 2).map((closing) => {
                 const successCategory = getSuccessRateCategory(closing.successRate);
                 return (
                   <div key={closing.id} className="border border-gray-200 rounded-lg p-4">
@@ -190,7 +410,7 @@ const CallGuide: React.FC = () => {
               Information Gathering Closes
             </h4>
             <div className="space-y-3">
-              {getClosingsByPersonaAndType(prospect.persona, 'information-gathering').slice(0, 1).map((closing) => {
+              {getClosingsByPersonaAndType(currentProspect.persona, 'information-gathering').slice(0, 1).map((closing) => {
                 const successCategory = getSuccessRateCategory(closing.successRate);
                 return (
                   <div key={closing.id} className="border border-gray-200 rounded-lg p-4">
@@ -237,7 +457,7 @@ const CallGuide: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">Generated: {new Date().toLocaleDateString()}</p>
-                <p className="text-sm text-gray-600">Target: {prospect.companyName}</p>
+                <p className="text-sm text-gray-600">Target: {currentProspect.companyName}</p>
               </div>
             </div>
           </div>
@@ -263,8 +483,20 @@ const CallGuide: React.FC = () => {
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">LEAD PROFILE</h3>
               <div className="space-y-1 text-sm">
-                <p><span className="font-medium">Company:</span> {prospect.companyName}</p>
-                <p><span className="font-medium">Contact:</span> {prospect.contactName}</p>
+                <p><span className="font-medium">Company:</span> {currentProspect.companyName}</p>
+                <p><span className="font-medium">Contact:</span> {currentProspect.contactName}</p>
+                {currentProspect.contactPhone && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Phone:</span>
+                    <ClickablePhone 
+                      phoneNumber={currentProspect.contactPhone}
+                      contactName={currentProspect.contactName}
+                      companyName={currentProspect.companyName}
+                      size="sm"
+                      showIcon={false}
+                    />
+                  </div>
+                )}
                 <p><span className="font-medium">Industry:</span> {selectedIndustry?.name}</p>
                 <p><span className="font-medium">Persona:</span> {selectedPersona?.title}</p>
               </div>

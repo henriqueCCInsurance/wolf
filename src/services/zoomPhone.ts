@@ -27,35 +27,119 @@ class ZoomPhoneService {
   }
 
   /**
-   * Initiate a call using Zoom Phone URI scheme
-   * This works if Zoom Phone is installed on the user's device
+   * Initiate a call using Zoom Phone URI scheme with fallback
    */
-  initiateCall(callData: CallData): boolean {
+  async initiateCall(callData: CallData): Promise<{ success: boolean; method: 'zoom' | 'tel' | 'failed'; message?: string }> {
     try {
       // Format phone number (remove any non-numeric characters except +)
       const cleanNumber = callData.phoneNumber.replace(/[^\d+]/g, '');
       
-      // Create Zoom Phone URI
-      const zoomUri = `zoomphonecall://${cleanNumber}`;
-      
+      if (!cleanNumber) {
+        return {
+          success: false,
+          method: 'failed',
+          message: 'Invalid phone number provided'
+        };
+      }
+
+      // Check if Zoom Phone is compatible first (synchronous check)
+      if (!this.isZoomPhoneCompatible()) {
+        console.log('Zoom Phone: Not compatible with this device, using fallback');
+        return this.fallbackToTelLink(cleanNumber);
+      }
+
       // Record call start time for duration tracking
       this.callStartTime = Date.now();
       
-      // Attempt to open Zoom Phone
-      window.location.href = zoomUri;
+      // Create Zoom Phone URI
+      const zoomUri = `zoomphonecall://${cleanNumber}`;
       
-      // Log call attempt
-      console.log('Zoom Phone call initiated:', {
-        number: cleanNumber,
-        contact: callData.contactName,
-        company: callData.companyName,
-        leadId: callData.leadId
+      // Attempt to open Zoom Phone with timeout
+      const callAttempt = new Promise<boolean>((resolve) => {
+        // Set up blur detection to see if Zoom Phone opened
+        let hasBlurred = false;
+        
+        const handleBlur = () => {
+          hasBlurred = true;
+          resolve(true);
+        };
+
+        const handleFocus = () => {
+          // If focus returns quickly, Zoom Phone likely didn't open
+          setTimeout(() => {
+            if (!hasBlurred) {
+              resolve(false);
+            }
+          }, 500);
+        };
+
+        window.addEventListener('blur', handleBlur, { once: true });
+        window.addEventListener('focus', handleFocus, { once: true });
+        
+        // Try to open Zoom Phone
+        window.location.href = zoomUri;
+        
+        // Timeout after 2 seconds
+        setTimeout(() => {
+          if (!hasBlurred) {
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', handleFocus);
+            resolve(false);
+          }
+        }, 2000);
       });
+
+      const zoomOpened = await callAttempt;
       
-      return true;
+      if (zoomOpened) {
+        // Log successful call attempt
+        console.log('Zoom Phone call initiated successfully:', {
+          number: cleanNumber,
+          contact: callData.contactName,
+          company: callData.companyName,
+          leadId: callData.leadId
+        });
+        
+        return {
+          success: true,
+          method: 'zoom',
+          message: 'Call initiated via Zoom Phone'
+        };
+      } else {
+        // Fallback to tel: link
+        console.log('Zoom Phone: Failed to open, falling back to tel: link');
+        return this.fallbackToTelLink(cleanNumber);
+      }
+      
     } catch (error) {
       console.error('Failed to initiate Zoom Phone call:', error);
-      return false;
+      return {
+        success: false,
+        method: 'failed',
+        message: `Failed to initiate call: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Fallback to standard tel: link for mobile or when Zoom Phone is unavailable
+   */
+  private fallbackToTelLink(phoneNumber: string): { success: boolean; method: 'tel'; message: string } {
+    try {
+      const telUri = `tel:${phoneNumber}`;
+      window.location.href = telUri;
+      
+      return {
+        success: true,
+        method: 'tel',
+        message: 'Call initiated via device phone app'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        method: 'tel' as const,
+        message: 'Failed to initiate fallback call'
+      };
     }
   }
 
@@ -66,7 +150,8 @@ class ZoomPhoneService {
     try {
       // This would require Zoom Web SDK integration
       // For now, fallback to URI scheme
-      return this.initiateCall(callData);
+      const result = await this.initiateCall(callData);
+      return result.success;
     } catch (error) {
       console.error('Failed to initiate call with SDK:', error);
       return false;
@@ -95,15 +180,77 @@ class ZoomPhoneService {
   }
 
   /**
-   * Check if Zoom Phone is likely installed
+   * Check if Zoom Phone is likely installed and available
    */
-  isZoomPhoneAvailable(): boolean {
-    // This is a basic check - in production, you'd want more sophisticated detection
+  async isZoomPhoneAvailable(): Promise<boolean> {
+    try {
+      // Method 1: Check if we're on desktop (Zoom Phone is desktop-only)
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isDesktop = !userAgent.includes('mobile') && !userAgent.includes('tablet');
+      
+      if (!isDesktop) {
+        console.log('Zoom Phone: Not available - mobile/tablet device detected');
+        return false;
+      }
+
+      // Method 2: Try to detect Zoom Phone protocol handler
+      // This is a more sophisticated check using a hidden iframe
+      return new Promise((resolve) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.style.position = 'absolute';
+        iframe.style.top = '-1000px';
+        
+        let hasBlurred = false;
+        
+        // If Zoom Phone is available, the window will blur when the protocol is triggered
+        const handleBlur = () => {
+          hasBlurred = true;
+          resolve(true);
+        };
+
+        // Timeout if no blur event occurs
+        const timeout = setTimeout(() => {
+          if (!hasBlurred) {
+            console.log('Zoom Phone: Not detected - no protocol handler response');
+            resolve(false);
+          }
+          window.removeEventListener('blur', handleBlur);
+          document.body.removeChild(iframe);
+        }, 1000);
+
+        window.addEventListener('blur', handleBlur);
+        document.body.appendChild(iframe);
+        
+        // Test with a dummy phone number
+        iframe.src = 'zoomphonecall://test-availability-check';
+        
+        // Clean up if blur event fires
+        if (hasBlurred) {
+          clearTimeout(timeout);
+          window.removeEventListener('blur', handleBlur);
+          document.body.removeChild(iframe);
+        }
+      });
+    } catch (error) {
+      console.warn('Zoom Phone availability check failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Synchronous check for basic Zoom Phone compatibility
+   */
+  isZoomPhoneCompatible(): boolean {
     const userAgent = navigator.userAgent.toLowerCase();
     const isDesktop = !userAgent.includes('mobile') && !userAgent.includes('tablet');
     
-    // Zoom Phone is primarily a desktop application
-    return isDesktop;
+    // Check for supported platforms
+    const isWindows = userAgent.includes('windows');
+    const isMac = userAgent.includes('mac');
+    const isLinux = userAgent.includes('linux') && !userAgent.includes('android');
+    
+    return isDesktop && (isWindows || isMac || isLinux);
   }
 
   /**
