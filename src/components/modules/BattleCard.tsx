@@ -5,21 +5,29 @@ import Button from '@/components/common/Button';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
 import EnhancedContentLibrary from '@/components/callguide/EnhancedContentLibrary';
 import LiveIndustryIntelligence from '@/components/intelligence/LiveIndustryIntelligence';
+import RelationshipMap from '@/components/intelligence/RelationshipMap';
+import CompetitiveIntelligence from '@/components/intelligence/CompetitiveIntelligence';
 import ClickablePhone from '@/components/common/ClickablePhone';
 import { useAppStore } from '@/store';
 import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
 import { callObjectives } from '@/data/content';
 import { getClosingsByPersonaAndType, getSuccessRateCategory } from '@/data/strategicClosings';
-import { Contact, PersonaType } from '@/types';
+import { Contact, PersonaType, ContactRelationship } from '@/types';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackBattleCardCreated } from '@/services/activityTracking';
+import { SuccessPredictionService } from '@/services/successPrediction';
+import { SuccessPredictionDisplay } from '@/components/common/SuccessPredictionDisplay';
 
 const CallGuide: React.FC = () => {
-  const { prospect, selectedContent, setCurrentModule, addBattleCard, setProspect, activeSequenceId, callSequences } = useAppStore();
+  const { prospect, selectedContent, setCurrentModule, addBattleCard, setProspect, activeSequenceId, callSequences, callLogs } = useAppStore();
+  const { user } = useAuth();
   const [lockedContacts, setLockedContacts] = useState<Contact[]>([]);
   const [currentContactIndex, setCurrentContactIndex] = useState(0);
   const [isMultiContactMode, setIsMultiContactMode] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
+  const [successPrediction, setSuccessPrediction] = useState<ReturnType<typeof SuccessPredictionService.prototype.calculatePrediction> | null>(null);
 
   // Load contacts from active sequence or localStorage on component mount
   useEffect(() => {
@@ -32,14 +40,14 @@ const CallGuide: React.FC = () => {
           const sequence = callSequences.find(seq => seq.id === activeSequenceId);
           if (sequence) {
             // TODO: Get userId from authentication context
-            const userId = 'current-user';
+            // const userId = 'current-user';
             
             // Load contacts from database if they have IDs
             if (sequence.contactIds && sequence.contactIds.length > 0) {
               const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
               
               // Convert database contacts to UI contacts
-              const uiContacts = dbContacts.map(dbContact => ({
+              const uiContacts = dbContacts.map((dbContact: any) => ({
                 id: dbContact.id,
                 companyName: dbContact.company,
                 contactName: dbContact.name,
@@ -174,6 +182,24 @@ const CallGuide: React.FC = () => {
 
   const currentProspect = getCurrentProspect();
 
+  // Calculate success prediction when prospect changes
+  useEffect(() => {
+    if (currentProspect) {
+      const predictionService = SuccessPredictionService.getInstance();
+      const prediction = predictionService.calculatePrediction(currentProspect, callLogs);
+      setSuccessPrediction(prediction);
+    }
+  }, [currentProspect, callLogs]);
+
+  if (loadingContacts) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+        <h2 className="text-xl font-semibold text-gray-900">Loading contacts...</h2>
+      </div>
+    );
+  }
+
   if (!currentProspect) {
     return (
       <div className="text-center py-12">
@@ -206,6 +232,15 @@ const CallGuide: React.FC = () => {
     
     // Add battle card to store and database
     addBattleCard(callGuide);
+    
+    // Track activity
+    if (user) {
+      trackBattleCardCreated(user, {
+        companyName: currentProspect.companyName,
+        contactName: currentProspect.contactName,
+        industry: currentProspect.industry
+      });
+    }
     
     // If we have a contact ID, update the battle card in database
     if (isMultiContactMode && lockedContacts[currentContactIndex]?.id) {
@@ -301,6 +336,11 @@ const CallGuide: React.FC = () => {
         </Card>
       )}
 
+      {/* Success Prediction */}
+      {successPrediction && (
+        <SuccessPredictionDisplay prediction={successPrediction} />
+      )}
+
       {/* Call Objectives */}
       <Card title="Call Objectives" subtitle="Your success outcomes ranked by priority">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -359,6 +399,38 @@ const CallGuide: React.FC = () => {
       >
         <LiveIndustryIntelligence industry={currentProspect.industry} />
       </CollapsibleSection>
+
+      {/* Relationship Map - Show only when we have multiple contacts from the same company */}
+      {isMultiContactMode && lockedContacts.length > 1 && (
+        <CollapsibleSection
+          title="Organizational Relationship Map"
+          subtitle="Visual representation of contact relationships"
+          defaultExpanded={true}
+          priority="high"
+        >
+          <RelationshipMap
+            contacts={lockedContacts.filter(c => c.companyName === currentProspect.companyName)}
+            companyName={currentProspect.companyName}
+            onUpdateRelationships={(relationships: ContactRelationship[]) => {
+              // Update relationships in the locked contacts
+              const updatedContacts = lockedContacts.map(contact => {
+                const contactRelationships = relationships.filter(
+                  r => r.fromContactId === contact.id
+                );
+                return {
+                  ...contact,
+                  relationships: contactRelationships
+                };
+              });
+              setLockedContacts(updatedContacts);
+              
+              // Also update in localStorage for persistence
+              localStorage.setItem('wolf-den-locked-contacts', JSON.stringify(updatedContacts));
+            }}
+            editable={true}
+          />
+        </CollapsibleSection>
+      )}
 
       {/* Strategic Closings */}
       <CollapsibleSection
@@ -433,6 +505,19 @@ const CallGuide: React.FC = () => {
             </div>
           </div>
         </div>
+      </CollapsibleSection>
+
+      {/* Competitive Intelligence */}
+      <CollapsibleSection
+        title="Competitive Intelligence"
+        subtitle="Battle cards and responses for competitive situations"
+        defaultExpanded={false}
+        priority="medium"
+      >
+        <CompetitiveIntelligence 
+          showFilters={false}
+          maxCompetitors={3}
+        />
       </CollapsibleSection>
 
       {/* Enhanced Content Selection */}
@@ -530,6 +615,29 @@ const CallGuide: React.FC = () => {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Success Prediction Insight */}
+          {successPrediction && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-900 mb-2">CALL SUCCESS INSIGHT</h3>
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-900">
+                    Predicted Success Rate: {successPrediction.score}%
+                  </span>
+                  <span className="text-xs text-blue-700 capitalize">
+                    {successPrediction.confidence} confidence
+                  </span>
+                </div>
+                <div className="text-xs text-blue-800">
+                  <p className="mb-1">Best time: {successPrediction.bestTimeToCall.dayOfWeek}, {successPrediction.bestTimeToCall.timeRange}</p>
+                  {successPrediction.recommendations.length > 0 && (
+                    <p className="italic">Tip: {successPrediction.recommendations[0]}</p>
+                  )}
+                </div>
               </div>
             </div>
           )}

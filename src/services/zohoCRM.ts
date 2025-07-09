@@ -4,6 +4,7 @@ interface ZohoCRMConfig {
   refreshToken?: string;
   accessToken?: string;
   apiDomain?: string; // e.g., 'zohoapis.com', 'zohoapis.eu', etc.
+  fieldMapping?: ZohoFieldMapping;
 }
 
 interface ZohoContact {
@@ -19,7 +20,44 @@ interface ZohoContact {
     name: string;
     id: string;
   };
+  // Allow dynamic fields
+  [key: string]: any;
 }
+
+// Field mapping configuration
+export interface ZohoFieldMapping {
+  // Wolf Den field -> Zoho field
+  companyName?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+  industry?: string;
+  persona?: string;
+  employeeCount?: string;
+  revenue?: string;
+  tags?: string;
+  address?: string;
+  // Custom fields
+  customFields?: {
+    [wolfDenField: string]: string; // Wolf Den field -> Zoho field
+  };
+}
+
+// Default field mapping
+export const DEFAULT_ZOHO_FIELD_MAPPING: ZohoFieldMapping = {
+  companyName: 'Account_Name',
+  contactName: 'Full_Name', // Will be parsed to First_Name/Last_Name
+  email: 'Email',
+  phone: 'Phone',
+  position: 'Title',
+  industry: 'Industry',
+  persona: 'Lead_Source', // Or custom field
+  employeeCount: 'No_of_Employees',
+  revenue: 'Annual_Revenue',
+  tags: 'Tag',
+  address: 'Mailing_Street'
+};
 
 // interface ZohoLead {
 //   id?: string;
@@ -51,10 +89,12 @@ interface CallActivity {
 class ZohoCRMService {
   private config: ZohoCRMConfig;
   private baseUrl: string;
+  private fieldMapping: ZohoFieldMapping;
 
   constructor(config: ZohoCRMConfig = {}) {
     this.config = config;
     this.baseUrl = `https://www.${config.apiDomain || 'zohoapis.com'}/crm/v6`;
+    this.fieldMapping = { ...DEFAULT_ZOHO_FIELD_MAPPING, ...config.fieldMapping };
   }
 
   /**
@@ -246,6 +286,193 @@ class ZohoCRMService {
   }
 
   /**
+   * Map Wolf Den contact to Zoho contact using field mapping
+   */
+  mapWolfDenToZoho(wolfDenContact: any): Partial<ZohoContact> {
+    const zohoContact: Partial<ZohoContact> = {};
+
+    // Handle name parsing
+    if (wolfDenContact.contactName) {
+      const [firstName, ...lastNameParts] = wolfDenContact.contactName.split(' ');
+      zohoContact.First_Name = firstName;
+      zohoContact.Last_Name = lastNameParts.join(' ') || '';
+    }
+
+    // Map standard fields
+    if (wolfDenContact.companyName && this.fieldMapping.companyName) {
+      zohoContact[this.fieldMapping.companyName] = wolfDenContact.companyName;
+    }
+    
+    if (wolfDenContact.email && this.fieldMapping.email) {
+      zohoContact[this.fieldMapping.email] = wolfDenContact.email;
+    }
+    
+    if (wolfDenContact.phone && this.fieldMapping.phone) {
+      zohoContact[this.fieldMapping.phone] = wolfDenContact.phone;
+    }
+    
+    if (wolfDenContact.position && this.fieldMapping.position) {
+      zohoContact[this.fieldMapping.position] = wolfDenContact.position;
+    }
+    
+    if (wolfDenContact.industry && this.fieldMapping.industry) {
+      zohoContact[this.fieldMapping.industry] = wolfDenContact.industry;
+    }
+    
+    if (wolfDenContact.persona && this.fieldMapping.persona) {
+      zohoContact[this.fieldMapping.persona] = this.mapPersonaToZoho(wolfDenContact.persona);
+    }
+    
+    if (wolfDenContact.employeeCount && this.fieldMapping.employeeCount) {
+      zohoContact[this.fieldMapping.employeeCount] = wolfDenContact.employeeCount;
+    }
+    
+    if (wolfDenContact.revenue && this.fieldMapping.revenue) {
+      zohoContact[this.fieldMapping.revenue] = wolfDenContact.revenue;
+    }
+    
+    if (wolfDenContact.tags && this.fieldMapping.tags) {
+      zohoContact[this.fieldMapping.tags] = Array.isArray(wolfDenContact.tags) 
+        ? wolfDenContact.tags.join(', ') 
+        : wolfDenContact.tags;
+    }
+    
+    if (wolfDenContact.address && this.fieldMapping.address) {
+      zohoContact[this.fieldMapping.address] = wolfDenContact.address;
+    }
+
+    // Map custom fields
+    if (this.fieldMapping.customFields) {
+      Object.entries(this.fieldMapping.customFields).forEach(([wolfDenField, zohoField]) => {
+        if (wolfDenContact[wolfDenField] !== undefined) {
+          zohoContact[zohoField] = wolfDenContact[wolfDenField];
+        }
+      });
+    }
+
+    // Always set Lead_Status if not already set
+    if (!zohoContact.Lead_Status) {
+      zohoContact.Lead_Status = 'Not Contacted';
+    }
+
+    return zohoContact;
+  }
+
+  /**
+   * Map Zoho contact to Wolf Den format using field mapping
+   */
+  mapZohoToWolfDen(zohoContact: ZohoContact): any {
+    const wolfDenContact: any = {
+      id: zohoContact.id,
+      source: 'crm' as const
+    };
+
+    // Map name
+    wolfDenContact.contactName = `${zohoContact.First_Name || ''} ${zohoContact.Last_Name || ''}`.trim();
+
+    // Reverse map standard fields
+    Object.entries(this.fieldMapping).forEach(([wolfDenField, zohoField]) => {
+      if (typeof zohoField === 'string' && zohoContact[zohoField] !== undefined) {
+        if (wolfDenField === 'persona') {
+          wolfDenContact[wolfDenField] = this.mapZohoToPersona(zohoContact[zohoField]);
+        } else if (wolfDenField === 'tags' && typeof zohoContact[zohoField] === 'string') {
+          wolfDenContact[wolfDenField] = zohoContact[zohoField].split(',').map(tag => tag.trim());
+        } else {
+          wolfDenContact[wolfDenField] = zohoContact[zohoField];
+        }
+      }
+    });
+
+    // Reverse map custom fields
+    if (this.fieldMapping.customFields) {
+      Object.entries(this.fieldMapping.customFields).forEach(([wolfDenField, zohoField]) => {
+        if (zohoContact[zohoField] !== undefined) {
+          wolfDenContact[wolfDenField] = zohoContact[zohoField];
+        }
+      });
+    }
+
+    return wolfDenContact;
+  }
+
+  /**
+   * Map Wolf Den persona type to Zoho value
+   */
+  private mapPersonaToZoho(persona: string): string {
+    const personaMapping: Record<string, string> = {
+      'cost-conscious-employer': 'Cost Conscious',
+      'benefits-optimizer': 'Benefits Optimizer',
+      'roi-focused-executive': 'ROI Focused',
+      'gatekeeper': 'Gatekeeper'
+    };
+    return personaMapping[persona] || persona;
+  }
+
+  /**
+   * Map Zoho value to Wolf Den persona type
+   */
+  private mapZohoToPersona(zohoValue: string): string {
+    const reverseMapping: Record<string, string> = {
+      'Cost Conscious': 'cost-conscious-employer',
+      'Benefits Optimizer': 'benefits-optimizer',
+      'ROI Focused': 'roi-focused-executive',
+      'Gatekeeper': 'gatekeeper'
+    };
+    return reverseMapping[zohoValue] || 'cost-conscious-employer';
+  }
+
+  /**
+   * Import multiple Wolf Den contacts
+   */
+  async importMultipleContacts(contacts: any[]): Promise<ZohoContact[]> {
+    try {
+      const zohoContacts = contacts.map(contact => this.mapWolfDenToZoho(contact));
+      
+      const payload = {
+        data: zohoContacts
+      };
+
+      const response = await this.apiRequest('/Contacts/upsert', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      return response.data || zohoContacts;
+    } catch (error) {
+      console.error('Error importing multiple contacts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get field configuration from Zoho
+   */
+  async getFieldConfiguration(module: 'Contacts' | 'Leads' = 'Contacts'): Promise<any> {
+    try {
+      const response = await this.apiRequest(`/settings/fields?module=${module}`);
+      return response.fields || [];
+    } catch (error) {
+      console.error('Error getting field configuration:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update field mapping configuration
+   */
+  updateFieldMapping(newMapping: Partial<ZohoFieldMapping>): void {
+    this.fieldMapping = { ...this.fieldMapping, ...newMapping };
+    this.config.fieldMapping = this.fieldMapping;
+  }
+
+  /**
+   * Get current field mapping
+   */
+  getFieldMapping(): ZohoFieldMapping {
+    return { ...this.fieldMapping };
+  }
+
+  /**
    * Sync call results to CRM
    */
   async syncCallResults(prospect: any, callOutcome: string, notes?: string, duration?: number): Promise<boolean> {
@@ -331,14 +558,29 @@ class ZohoCRMService {
   /**
    * Get all contacts (with pagination)
    */
-  async getAllContacts(page: number = 1, perPage: number = 200): Promise<ZohoContact[]> {
+  async getAllContacts(page: number = 1, perPage: number = 200): Promise<any[]> {
     try {
       const response = await this.apiRequest(`/Contacts?page=${page}&per_page=${perPage}`);
-      return response.data || [];
+      const zohoContacts = response.data || [];
+      // Map to Wolf Den format
+      return zohoContacts.map((contact: ZohoContact) => this.mapZohoToWolfDen(contact));
     } catch (error) {
       console.error('Error getting all contacts:', error);
       // Return mock data for demo
-      return this.getMockContacts();
+      return this.getMockContacts().map(contact => this.mapZohoToWolfDen(contact));
+    }
+  }
+
+  /**
+   * Search contacts with field mapping
+   */
+  async searchContactsMapped(searchTerm: string): Promise<any[]> {
+    try {
+      const zohoContacts = await this.searchContacts(searchTerm);
+      return zohoContacts.map(contact => this.mapZohoToWolfDen(contact));
+    } catch (error) {
+      console.error('Error searching contacts:', error);
+      return [];
     }
   }
 }
@@ -348,7 +590,9 @@ export const zohoCRMService = new ZohoCRMService({
   clientId: import.meta.env.VITE_ZOHO_CLIENT_ID,
   clientSecret: import.meta.env.VITE_ZOHO_CLIENT_SECRET,
   refreshToken: import.meta.env.VITE_ZOHO_REFRESH_TOKEN,
-  apiDomain: import.meta.env.VITE_ZOHO_API_DOMAIN || 'zohoapis.com'
+  apiDomain: import.meta.env.VITE_ZOHO_API_DOMAIN || 'zohoapis.com',
+  fieldMapping: DEFAULT_ZOHO_FIELD_MAPPING
 });
 
 export default ZohoCRMService;
+export type { ZohoFieldMapping, ZohoContact };

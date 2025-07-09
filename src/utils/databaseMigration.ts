@@ -1,5 +1,5 @@
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
-import { type Contact, type UserPreferences } from '@/db/schema';
+import { type UserPreferences } from '@/db/schema';
 
 interface LocalStorageData {
   lockedContacts?: any[];
@@ -82,7 +82,7 @@ export async function migrateLocalStorageToDatabase(userId: string): Promise<{
         // Clear localStorage after successful migration
         localStorage.removeItem('wolf-den-locked-contacts');
       } catch (error) {
-        errors.push(`Failed to migrate contacts: ${error.message}`);
+        errors.push(`Failed to migrate contacts: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -106,7 +106,7 @@ export async function migrateLocalStorageToDatabase(userId: string): Promise<{
         localStorage.removeItem('wolf-den-theme');
         localStorage.removeItem('searchConfig');
       } catch (error) {
-        errors.push(`Failed to migrate preferences: ${error.message}`);
+        errors.push(`Failed to migrate preferences: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -130,7 +130,7 @@ export async function migrateLocalStorageToDatabase(userId: string): Promise<{
           localStorage.removeItem('currentCompanyIntelligence');
         }
       } catch (error) {
-        errors.push(`Failed to migrate company intelligence: ${error.message}`);
+        errors.push(`Failed to migrate company intelligence: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -160,7 +160,7 @@ export async function migrateLocalStorageToDatabase(userId: string): Promise<{
     return {
       success: false,
       migrated,
-      errors: [`Migration failed: ${error.message}`]
+      errors: [`Migration failed: ${error instanceof Error ? error.message : String(error)}`]
     };
   }
 }

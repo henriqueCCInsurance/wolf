@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Prospect, ContentItem, CallLog, BattleCard, WebSearchResult, CallSequence, Contact } from '@/types';
+import { Prospect, ContentItem, CallLog, BattleCard, WebSearchResult, CallSequence, Contact, CompetitiveEncounter } from '@/types';
 import { DatabaseService } from '@/services/database';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
+import { CompetitiveIntelligenceService } from '@/services/competitiveIntelligence';
 
 interface ProfileData {
   userName?: string;
@@ -44,6 +45,10 @@ interface AppState {
   updateCallLog: (id: string, updates: Partial<CallLog>) => void;
   getCallLogsForContact: (contactId: string) => CallLog[];
   clearCallLogs: () => void;
+  
+  // Competitive intelligence
+  competitiveEncounters: CompetitiveEncounter[];
+  addCompetitiveEncounter: (encounter: CompetitiveEncounter) => void;
   
   // Battle cards history
   battleCards: BattleCard[];
@@ -105,6 +110,7 @@ export const useAppStore = create<AppState>()(
       salesWizardMode: false,
       isGeneratingIntelligence: false,
       profile: {},
+      competitiveEncounters: [],
       
       // Lead/Prospect actions
       setProspect: (prospect) => set({ prospect, lead: prospect }),
@@ -129,6 +135,10 @@ export const useAppStore = create<AppState>()(
       // Call log actions
       addCallLog: async (log) => {
         const { callLogs, activeSequenceId, callSequences } = get();
+        
+        // Process competitive intelligence
+        const competitiveService = CompetitiveIntelligenceService.getInstance();
+        competitiveService.processCallLogForCompetitiveIntel(log);
         
         // First, add to local state for immediate UI feedback
         set({ callLogs: [...callLogs, log] });
@@ -221,6 +231,12 @@ export const useAppStore = create<AppState>()(
         set({ callLogs: [] });
       },
       
+      // Competitive intelligence actions
+      addCompetitiveEncounter: (encounter) => {
+        const { competitiveEncounters } = get();
+        set({ competitiveEncounters: [...competitiveEncounters, encounter] });
+      },
+      
       // Battle card actions
       addBattleCard: (card) => {
         const { battleCards } = get();
@@ -306,7 +322,8 @@ export const useAppStore = create<AppState>()(
         activeSequenceId: state.activeSequenceId,
         advancedMode: state.advancedMode,
         salesWizardMode: state.salesWizardMode,
-        profile: state.profile
+        profile: state.profile,
+        competitiveEncounters: state.competitiveEncounters
       })
     }
   )

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import Confetti from 'react-confetti';
 import * as THREE from 'three';
 import { useAppStore } from '@/store';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackSuccessCelebration } from '@/services/activityTracking';
 
 interface CelebrationSystemProps {
   isActive: boolean;
@@ -40,6 +42,7 @@ const CelebrationSystem: React.FC<CelebrationSystemProps> = ({
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const { profile } = useAppStore();
+  const { user } = useAuth();
   const [currentImageIndex] = useState(0);
 
   const celebrationConfig = {
@@ -95,6 +98,14 @@ const CelebrationSystem: React.FC<CelebrationSystemProps> = ({
 
     // Show confetti
     setShowConfetti(true);
+    
+    // Track celebration activity
+    if (user) {
+      trackSuccessCelebration(user, {
+        celebrationType,
+        milestone: config.message
+      });
+    }
 
     // Initialize Three.js scene
     const scene = new THREE.Scene();

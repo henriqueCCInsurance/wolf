@@ -7,12 +7,15 @@ import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
 import { contentLibrary } from '@/data/content';
 import { zoomPhoneService } from '@/services/zoomPhone';
+import { SuccessPredictionService } from '@/services/successPrediction';
+import { SuccessPredictionDisplay } from '@/components/common/SuccessPredictionDisplay';
 
 const SimplifiedCallGuide: React.FC = () => {
-  const { prospect, setCurrentModule } = useAppStore();
+  const { prospect, setCurrentModule, callLogs } = useAppStore();
   const [callStarted, setCallStarted] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [callTimer, setCallTimer] = useState<NodeJS.Timeout | null>(null);
+  const [successPrediction, setSuccessPrediction] = useState<ReturnType<typeof SuccessPredictionService.prototype.calculatePrediction> | null>(null);
 
   if (!prospect) {
     return (
@@ -31,6 +34,15 @@ const SimplifiedCallGuide: React.FC = () => {
   const selectedPersona = personas.find(p => p.id === prospect.persona);
   const selectedIndustry = industries.find(i => i.id === prospect.industry);
   const personaContent = contentLibrary.filter((c: any) => c.persona === prospect.persona);
+
+  // Calculate success prediction when component mounts or prospect changes
+  React.useEffect(() => {
+    if (prospect && !callStarted) {
+      const predictionService = SuccessPredictionService.getInstance();
+      const prediction = predictionService.calculatePrediction(prospect, callLogs);
+      setSuccessPrediction(prediction);
+    }
+  }, [prospect, callLogs, callStarted]);
 
   const handleStartCall = async () => {
     if (!prospect?.contactPhone) {
@@ -83,6 +95,13 @@ const SimplifiedCallGuide: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      {/* Success Prediction - Show before call starts */}
+      {successPrediction && !callStarted && (
+        <div className="mb-6">
+          <SuccessPredictionDisplay prediction={successPrediction} />
+        </div>
+      )}
+
       {/* Header with Call Controls */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

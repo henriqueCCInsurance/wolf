@@ -2,17 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Users, 
- 
   Calendar, 
   Phone, 
   Target, 
   Award,
-  Download,
   Plus,
   Eye,
   Trash2,
   BarChart3,
-  UserCheck
+  UserCheck,
+  Activity
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +19,8 @@ import { User, TeamPerformance, TimePeriod } from '@/types';
 import { authService } from '@/services/authService';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
+import ExportMenu from '@/components/common/ExportMenu';
+import { TeamActivityFeed } from '@/components/analytics/TeamActivityFeed';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -74,24 +75,8 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleGenerateReport = () => {
-    // Mock report generation
-    const reportData = {
-      period: selectedPeriod,
-      teamMetrics,
-      individualPerformance: mockUserPerformance,
-      generatedAt: new Date()
-    };
-
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { 
-      type: 'application/json' 
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `team-performance-${selectedPeriod}-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExportComplete = (format: string) => {
+    console.log(`Team report exported in ${format} format`);
   };
 
   if (loading) {
@@ -122,10 +107,24 @@ const AdminDashboard: React.FC = () => {
             <option value="month">This Month</option>
             <option value="quarter">This Quarter</option>
           </select>
-          <Button onClick={handleGenerateReport}>
-            <Download className="w-4 h-4 mr-2" />
-            Generate Report
-          </Button>
+          <ExportMenu
+            data={{
+              teamData: teamMetrics,
+              analytics: {
+                performanceData: mockPerformanceData,
+                userPerformance: mockUserPerformance,
+                outcomeDistribution: [
+                  { name: 'Meeting Booked', value: 35 },
+                  { name: 'Follow-up', value: 25 },
+                  { name: 'Nurture', value: 30 },
+                  { name: 'Disqualified', value: 10 }
+                ]
+              }
+            }}
+            dataType="analytics"
+            filename={`team-performance-${selectedPeriod}`}
+            onExportComplete={handleExportComplete}
+          />
         </div>
       </div>
 
@@ -299,6 +298,21 @@ const AdminDashboard: React.FC = () => {
             ))}
           </div>
         </div>
+      </Card>
+
+      {/* Team Activity Feed */}
+      <Card 
+        title="Team Activity Feed" 
+        subtitle="Real-time view of what your team is doing"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-5 h-5 text-primary-600" />
+          <span className="text-sm text-gray-600">Live updates from your sales team</span>
+        </div>
+        <TeamActivityFeed 
+          limit={50}
+          compact={false}
+        />
       </Card>
     </div>
   );

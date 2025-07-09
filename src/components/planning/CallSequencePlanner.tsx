@@ -8,7 +8,6 @@ import {
   Phone,
   MapPin,
   Printer,
-  Download,
   X,
   Clock,
   CheckCircle,
@@ -17,6 +16,7 @@ import {
 import { CallSequence, Contact } from '@/types';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
+import ExportMenu from '@/components/common/ExportMenu';
 import ContactImporter from './ContactImporter';
 import ClickablePhone from '@/components/common/ClickablePhone';
 import { useAppStore } from '@/store';
@@ -120,22 +120,8 @@ const CallSequencePlanner: React.FC = () => {
     setSelectedContacts(newSelected);
   };
 
-  const exportSequence = () => {
-    if (!currentSequence) return;
-    
-    const data = {
-      sequence: currentSequence,
-      exportedAt: new Date().toISOString(),
-      type: 'call-sequence'
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `call-sequence-${currentSequence.id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExportComplete = (format: string) => {
+    console.log(`Call sequence exported in ${format} format`);
   };
 
   const printSequence = () => {
@@ -383,10 +369,18 @@ const CallSequencePlanner: React.FC = () => {
                   <Printer className="w-4 h-4 mr-2" />
                   Print
                 </Button>
-                <Button onClick={exportSequence} variant="secondary" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
+                <ExportMenu
+                  data={{
+                    callSequence: currentSequence,
+                    contacts: contacts,
+                    callLogs: callLogs.filter(log => 
+                      currentSequence?.contacts.some(c => c.id === log.contactId)
+                    )
+                  }}
+                  dataType="complete"
+                  filename={`call-sequence-${currentSequence?.id}`}
+                  onExportComplete={handleExportComplete}
+                />
               </div>
             </div>
             

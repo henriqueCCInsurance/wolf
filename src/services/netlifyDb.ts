@@ -185,13 +185,14 @@ export const contactService = {
         conditions.push(eq(contacts.industry, filters.industry));
       }
       if (filters.search) {
-        conditions.push(
-          or(
-            ilike(contacts.name, `%${filters.search}%`),
-            ilike(contacts.company, `%${filters.search}%`),
-            ilike(contacts.title, `%${filters.search}%`)
-          )
+        const searchCondition = or(
+          ilike(contacts.name, `%${filters.search}%`),
+          ilike(contacts.company, `%${filters.search}%`),
+          ilike(contacts.title, `%${filters.search}%`)
         );
+        if (searchCondition) {
+          conditions.push(searchCondition);
+        }
       }
       
       query = db.select().from(contacts).where(and(...conditions));
@@ -218,7 +219,7 @@ export const contactService = {
   },
 
   async update(id: string, userId: string, data: Partial<Contact>) {
-    const { id: _, createdAt, updatedAt, ...updateData } = data;
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = data;
     await db.update(contacts)
       .set({ ...updateData, updatedAt: new Date() })
       .where(and(
@@ -263,7 +264,7 @@ export const userPreferencesService = {
   },
 
   async update(userId: string, data: Partial<UserPreferences>) {
-    const { id, createdAt, updatedAt, ...updateData } = data;
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = data;
     
     await db.update(userPreferences)
       .set({ ...updateData, updatedAt: new Date() })
@@ -319,7 +320,7 @@ export const companyIntelligenceService = {
     // Note: This would need proper SQL comparison for timestamp
     // For now, we'll fetch and filter in memory
     const allIntel = await db.select().from(companyIntelligence);
-    const expired = allIntel.filter(intel => 
+    const expired = allIntel.filter((intel: any) => 
       intel.expiresAt && new Date(intel.expiresAt) < now
     );
     

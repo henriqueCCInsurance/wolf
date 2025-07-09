@@ -35,6 +35,8 @@ import ClickablePhone from '@/components/common/ClickablePhone';
 import { useAppStore } from '@/store';
 import { callObjectives } from '@/data/content';
 import { zoomPhoneService } from '@/services/zoomPhone';
+import { SuccessPredictionService } from '@/services/successPrediction';
+import { SuccessPredictionDisplay } from '@/components/common/SuccessPredictionDisplay';
 
 
 const NO_GO_REASONS = [
@@ -99,6 +101,7 @@ const LiveCallAssistance: React.FC = () => {
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showSequenceDetails, setShowSequenceDetails] = useState(false);
+  const [successPrediction, setSuccessPrediction] = useState<ReturnType<typeof SuccessPredictionService.prototype.calculatePrediction> | null>(null);
   
   // Computed call states for easier logic
   const isCallActive = callPrepared || callInProgress;
@@ -258,6 +261,27 @@ const LiveCallAssistance: React.FC = () => {
       return updatedSteps;
     });
   }, [selectedContent, baseSteps]);
+
+  // Calculate success prediction when prospect changes
+  useEffect(() => {
+    if (prospect && !isCallActive) {
+      const predictionService = SuccessPredictionService.getInstance();
+      const prediction = predictionService.calculatePrediction(
+        prospect,
+        useAppStore.getState().callLogs
+      );
+      setSuccessPrediction(prediction);
+    }
+  }, [prospect, isCallActive]);
+
+  // Update prediction model after successful call
+  useEffect(() => {
+    const latestCallLog = useAppStore.getState().callLogs[useAppStore.getState().callLogs.length - 1];
+    if (latestCallLog && latestCallLog.createdAt.getTime() > Date.now() - 5000) {
+      const predictionService = SuccessPredictionService.getInstance();
+      predictionService.updateModel(latestCallLog);
+    }
+  }, [useAppStore.getState().callLogs.length]);
 
   // Start the call session (timer) without Zoom
   const handleStartSession = () => {
@@ -613,6 +637,14 @@ const LiveCallAssistance: React.FC = () => {
           prospect={prospect} 
           className=""
         />
+
+        {/* Success Prediction */}
+        {successPrediction && !isCallActive && (
+          <SuccessPredictionDisplay 
+            prediction={successPrediction}
+            compact={true}
+          />
+        )}
 
         {/* Call Status Card */}
         <Card className={`${

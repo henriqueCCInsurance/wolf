@@ -1,18 +1,38 @@
-import React, { useState } from 'react';
-import { TrendingUp, Phone, Target, Trophy, Calendar, Clock, Users, BarChart3, ArrowRight, HelpCircle, ChevronRight, Info, Zap, PieChart } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { TrendingUp, Phone, Target, Trophy, Calendar, Clock, Users, BarChart3, ArrowRight, HelpCircle, ChevronRight, Info, Zap, PieChart, DollarSign, AlertTriangle, CheckCircle, Activity, TrendingDown } from 'lucide-react';
 import Card from '@/components/common/Card';
 import EmptyState from '@/components/common/EmptyState';
 import Toggle from '@/components/common/Toggle';
+import DealScoreBadge from '@/components/common/DealScoreBadge';
 import { useAppStore } from '@/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { DealScoringService } from '@/services/dealScoring';
+import { TeamActivityFeed } from '@/components/analytics/TeamActivityFeed';
+import { 
+  calculateRevenueMetrics, 
+  calculateSuccessRateMetrics, 
+  calculatePersonaPerformance, 
+  generateDashboardInsights, 
+  generateDashboardAlerts, 
+  formatCurrency, 
+  calculatePerformanceScore 
+} from '@/utils/dashboardMetrics';
 
 const Dashboard: React.FC = () => {
   const { callLogs, battleCards, setCurrentModule, prospect, salesWizardMode, setSalesWizardMode } = useAppStore();
   const { user } = useAuth();
   const [hoveredStep, setHoveredStep] = useState<number | null>(null);
+  const [showDetailedMetrics, setShowDetailedMetrics] = useState(false);
   
-  // Calculate statistics
+  // Calculate comprehensive metrics
+  const revenueMetrics = useMemo(() => calculateRevenueMetrics(callLogs, battleCards, []), [callLogs, battleCards]);
+  const successMetrics = useMemo(() => calculateSuccessRateMetrics(callLogs), [callLogs]);
+  const personaMetrics = useMemo(() => calculatePersonaPerformance(callLogs, battleCards), [callLogs, battleCards]);
+  const insights = useMemo(() => generateDashboardInsights(callLogs, battleCards, revenueMetrics, successMetrics, personaMetrics), [callLogs, battleCards, revenueMetrics, successMetrics, personaMetrics]);
+  const alerts = useMemo(() => generateDashboardAlerts(callLogs, successMetrics, revenueMetrics), [callLogs, successMetrics, revenueMetrics]);
+  
+  // Legacy statistics for backward compatibility
   const totalCalls = callLogs.length;
   const successfulCalls = callLogs.filter(log => log.outcome === 'meeting-booked').length;
   const successRate = totalCalls > 0 ? (successfulCalls / totalCalls * 100) : 0;
@@ -20,6 +40,9 @@ const Dashboard: React.FC = () => {
     const today = new Date().toDateString();
     return new Date(log.createdAt).toDateString() === today;
   }).length;
+  
+  // Calculate performance score
+  const performanceScore = calculatePerformanceScore(successRate, totalCalls, revenueMetrics.totalPipeline);
   
   // Get recent activity
   const recentCalls = callLogs.slice(-5).reverse();
@@ -194,14 +217,57 @@ const Dashboard: React.FC = () => {
   // For new users, don't show trends until they have some data
   const isNewUser = callLogs.length === 0;
   
-  const stats = [
+  // Executive-level metrics
+  const executiveStats = [
+    {
+      label: 'Revenue Pipeline',
+      value: formatCurrency(revenueMetrics.totalPipeline),
+      icon: DollarSign,
+      color: 'bg-green-500',
+      trend: null,
+      trendUp: false,
+      description: 'Total weighted pipeline value'
+    },
+    {
+      label: 'Success Rate',
+      value: `${successMetrics.current.toFixed(1)}%`,
+      icon: Trophy,
+      color: 'bg-blue-500',
+      trend: successMetrics.trend === 'up' ? `+${successMetrics.trendPercentage.toFixed(1)}%` : 
+             successMetrics.trend === 'down' ? `-${successMetrics.trendPercentage.toFixed(1)}%` : null,
+      trendUp: successMetrics.trend === 'up',
+      description: 'Weekly success rate trend'
+    },
+    {
+      label: 'Avg Deal Size',
+      value: formatCurrency(revenueMetrics.averageDealSize),
+      icon: Target,
+      color: 'bg-purple-500',
+      trend: null,
+      trendUp: false,
+      description: 'Average potential deal value'
+    },
+    {
+      label: 'Performance Score',
+      value: performanceScore,
+      icon: Activity,
+      color: 'bg-orange-500',
+      trend: null,
+      trendUp: false,
+      description: 'Overall performance rating'
+    }
+  ];
+  
+  // Legacy stats for basic view
+  const basicStats = [
     {
       label: 'Total Calls',
       value: totalCalls,
       icon: Phone,
       color: 'bg-blue-500',
       trend: isNewUser ? null : callsTrend.trend,
-      trendUp: callsTrend.trendUp
+      trendUp: callsTrend.trendUp,
+      description: 'All calls made'
     },
     {
       label: 'Success Rate',
@@ -209,28 +275,35 @@ const Dashboard: React.FC = () => {
       icon: Trophy,
       color: 'bg-green-500',
       trend: isNewUser ? null : successTrend.trend,
-      trendUp: successTrend.trendUp
+      trendUp: successTrend.trendUp,
+      description: 'Meeting booking rate'
     },
     {
       label: 'Today\'s Calls',
       value: todayCalls,
       icon: Calendar,
       color: 'bg-purple-500',
-      trend: null, // Don't show trend for daily data
-      trendUp: false
+      trend: null,
+      trendUp: false,
+      description: 'Calls made today'
     },
     {
       label: 'Battle Cards',
       value: battleCards.length,
       icon: Target,
       color: 'bg-orange-500',
-      trend: null, // Don't show trend for battle cards
-      trendUp: false
+      trend: null,
+      trendUp: false,
+      description: 'Battle cards created'
     }
   ];
   
+  const stats = showDetailedMetrics ? executiveStats : basicStats;
+  
   return (
-    <div className="space-y-6">
+    <div className="flex gap-6">
+      {/* Main content area */}
+      <div className="flex-1 space-y-6">
       {/* Welcome Message */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -376,15 +449,26 @@ const Dashboard: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Header */}
+      {/* Executive Dashboard Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Performance Overview</h2>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">Track your sales metrics and progress</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Executive Dashboard</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">Revenue-focused KPIs and performance metrics</p>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-          <Clock size={16} />
-          <span>Last updated: {new Date().toLocaleTimeString()}</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-300">Basic</span>
+            <Toggle
+              enabled={showDetailedMetrics}
+              onChange={setShowDetailedMetrics}
+              size="sm"
+            />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Executive</span>
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+            <Clock size={16} />
+            <span>Last updated: {new Date().toLocaleTimeString()}</span>
+          </div>
         </div>
       </div>
       
@@ -399,14 +483,18 @@ const Dashboard: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className="relative overflow-hidden">
+              <Card className="relative overflow-hidden hover:shadow-lg transition-shadow duration-200">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm text-gray-600 dark:text-gray-300">{stat.label}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{stat.value}</p>
                     {stat.trend && (
                       <div className="flex items-center mt-2">
-                        <TrendingUp size={14} className={stat.trendUp ? 'text-green-500' : 'text-red-500'} />
+                        {stat.trendUp ? (
+                          <TrendingUp size={14} className="text-green-500" />
+                        ) : (
+                          <TrendingDown size={14} className="text-red-500" />
+                        )}
                         <span className={`text-sm ml-1 ${stat.trendUp ? 'text-green-500' : 'text-red-500'}`}>
                           {stat.trend}
                         </span>
@@ -417,6 +505,9 @@ const Dashboard: React.FC = () => {
                       <div className="flex items-center mt-2">
                         <span className="text-sm text-gray-500 dark:text-gray-300">Start tracking your progress</span>
                       </div>
+                    )}
+                    {stat.description && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stat.description}</p>
                     )}
                   </div>
                   <div className={`p-3 rounded-lg ${stat.color} bg-opacity-10`}>
@@ -429,35 +520,276 @@ const Dashboard: React.FC = () => {
         })}
       </div>
       
-      {/* Charts and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Performance */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Performance</h2>
-            <BarChart3 size={20} className="text-gray-400 dark:text-gray-500" />
-          </div>
-          <div className="space-y-3">
-            {weeklyData.map((day) => (
-              <div key={day.day} className="flex items-center">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300 w-12">{day.day}</span>
-                <div className="flex-1 flex items-center space-x-2">
-                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
-                    <div 
-                      className="h-full bg-primary-500 rounded-full flex items-center justify-end pr-2"
-                      style={{ width: `${(day.calls / 20) * 100}%` }}
-                    >
-                      <span className="text-xs text-white font-medium">{day.calls}</span>
+      {/* Alerts Section */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance Alerts</h3>
+          <div className="space-y-2">
+            {alerts.map((alert, index) => (
+              <motion.div
+                key={alert.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className={`border-l-4 ${
+                  alert.severity === 'high' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
+                  alert.severity === 'medium' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                  'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <AlertTriangle size={20} className={`${
+                        alert.severity === 'high' ? 'text-red-500' :
+                        alert.severity === 'medium' ? 'text-yellow-500' :
+                        'text-blue-500'
+                      }`} />
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">{alert.title}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{alert.message}</p>
+                      </div>
                     </div>
+                    {alert.actionRequired && (
+                      <span className="text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200 px-2 py-1 rounded-full">
+                        Action Required
+                      </span>
+                    )}
                   </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300 w-20">
-                    {((day.success / day.calls) * 100).toFixed(0)}% success
-                  </span>
-                </div>
-              </div>
+                </Card>
+              </motion.div>
             ))}
           </div>
-        </Card>
+        </div>
+      )}
+      
+      {/* Insights Section */}
+      {insights.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Insights</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {insights.map((insight, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className={`${
+                  insight.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' :
+                  insight.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700' :
+                  insight.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700' :
+                  'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
+                }`}>
+                  <div className="flex items-start space-x-3">
+                    <div className={`p-2 rounded-lg ${
+                      insight.type === 'success' ? 'bg-green-100 dark:bg-green-900/30' :
+                      insight.type === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                      insight.type === 'error' ? 'bg-red-100 dark:bg-red-900/30' :
+                      'bg-blue-100 dark:bg-blue-900/30'
+                    }`}>
+                      {insight.type === 'success' && <CheckCircle size={20} className="text-green-600 dark:text-green-400" />}
+                      {insight.type === 'warning' && <AlertTriangle size={20} className="text-yellow-600 dark:text-yellow-400" />}
+                      {insight.type === 'error' && <AlertTriangle size={20} className="text-red-600 dark:text-red-400" />}
+                      {insight.type === 'info' && <Info size={20} className="text-blue-600 dark:text-blue-400" />}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{insight.title}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{insight.message}</p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Charts and Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Pipeline Chart */}
+        {showDetailedMetrics && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pipeline by Stage</h2>
+              <DollarSign size={20} className="text-gray-400 dark:text-gray-500" />
+            </div>
+            <div className="space-y-4">
+              {revenueMetrics.pipelineByStage.map((stage, stageIndex) => {
+                const maxValue = Math.max(...revenueMetrics.pipelineByStage.map(s => s.value));
+                const widthPercentage = maxValue > 0 ? (stage.value / maxValue) * 100 : 0;
+                
+                return (
+                  <div key={stage.stage} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{stage.stage}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{stage.count} prospects</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-8 overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full flex items-center justify-between px-3 transition-all duration-500 ${
+                          stageIndex === 0 ? 'bg-yellow-500' :
+                          stageIndex === 1 ? 'bg-blue-500' :
+                          'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.max(widthPercentage, 10)}%` }}
+                      >
+                        <span className="text-xs text-white font-medium">{formatCurrency(stage.value)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Pipeline Value</span>
+                <span className="text-lg font-bold text-primary-600 dark:text-primary-400">
+                  {formatCurrency(revenueMetrics.totalPipeline)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Forecast Accuracy</span>
+                <span className="text-xs text-gray-600 dark:text-gray-300">
+                  {revenueMetrics.forecastAccuracy.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          </Card>
+        )}
+        
+        {/* Persona Performance Chart */}
+        {showDetailedMetrics && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Top Performing Personas</h2>
+              <Users size={20} className="text-gray-400 dark:text-gray-500" />
+            </div>
+            <div className="space-y-4">
+              {personaMetrics
+                .filter(p => p.totalCalls > 0)
+                .sort((a, b) => b.successRate - a.successRate)
+                .slice(0, 3)
+                .map((persona, personaIndex) => (
+                  <div key={persona.persona} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${
+                          personaIndex === 0 ? 'bg-green-500' :
+                          personaIndex === 1 ? 'bg-blue-500' :
+                          'bg-yellow-500'
+                        }`}></div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">
+                          {persona.persona.replace('-', ' ')}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4 mt-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {persona.totalCalls} calls
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatCurrency(persona.revenue)} revenue
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        {persona.successRate.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        success rate
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              {personaMetrics.filter(p => p.totalCalls > 0).length === 0 && (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <Users size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>No persona data available yet</p>
+                  <p className="text-sm mt-1">Start making calls to see performance by persona</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+        
+        {/* Weekly Performance (Legacy) */}
+        {!showDetailedMetrics && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Performance</h2>
+              <BarChart3 size={20} className="text-gray-400 dark:text-gray-500" />
+            </div>
+            <div className="space-y-3">
+              {weeklyData.map((day) => (
+                <div key={day.day} className="flex items-center">
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300 w-12">{day.day}</span>
+                  <div className="flex-1 flex items-center space-x-2">
+                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden">
+                      <div 
+                        className="h-full bg-primary-500 rounded-full flex items-center justify-end pr-2"
+                        style={{ width: `${(day.calls / 20) * 100}%` }}
+                      >
+                        <span className="text-xs text-white font-medium">{day.calls}</span>
+                      </div>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-300 w-20">
+                      {day.calls > 0 ? ((day.success / day.calls) * 100).toFixed(0) : 0}% success
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+        
+        {/* Success Rate Trend */}
+        {showDetailedMetrics && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Success Rate Trend</h2>
+              <TrendingUp size={20} className="text-gray-400 dark:text-gray-500" />
+            </div>
+            <div className="space-y-4">
+              {successMetrics.weeklyData.slice(-4).map((week) => (
+                <div key={week.week} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300 w-16">{week.week}</span>
+                    <div className="flex-1 w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full transition-all duration-500"
+                        style={{ width: `${week.rate}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {week.rate.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {week.calls} calls
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 dark:text-gray-300">Current Week</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    {successMetrics.current.toFixed(1)}%
+                  </span>
+                  {successMetrics.trend === 'up' && (
+                    <span className="text-sm text-green-500 font-medium">↑ {successMetrics.trendPercentage.toFixed(1)}%</span>
+                  )}
+                  {successMetrics.trend === 'down' && (
+                    <span className="text-sm text-red-500 font-medium">↓ {successMetrics.trendPercentage.toFixed(1)}%</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
         
         {/* Recent Activity */}
         <Card>
@@ -467,28 +799,50 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="space-y-3">
             {recentCalls.length > 0 ? (
-              recentCalls.map((call, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">Call #{index + 1}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{call.outcome}</p>
+              recentCalls.map((call, index) => {
+                // Find the battle card for this call to get lead info
+                const battleCard = battleCards.find(bc => 
+                  bc.generatedAt && 
+                  Math.abs(new Date(bc.generatedAt).getTime() - new Date(call.createdAt).getTime()) < 3600000 // Within 1 hour
+                );
+                const lead = battleCard?.lead;
+                const score = lead ? DealScoringService.calculateScore(lead, callLogs) : null;
+                
+                return (
+                  <div key={index} className="flex items-start justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          {lead ? lead.companyName : `Call #${callLogs.length - index}`}
+                        </p>
+                        {score && <DealScoreBadge score={score} size="sm" showDetails={false} />}
+                      </div>
+                      {lead && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          {lead.contactName} • {lead.contactPosition || 'Contact'}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {call.keyTakeaway}
+                      </p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        call.outcome === 'meeting-booked' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          : call.outcome === 'follow-up'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {call.outcome}
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
+                        {new Date(call.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      call.outcome === 'meeting-booked' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                        : call.outcome === 'follow-up'
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {call.outcome}
-                    </span>
-                    <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
-                      {new Date(call.createdAt).toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <EmptyState
                 icon={Users}
@@ -599,6 +953,18 @@ const Dashboard: React.FC = () => {
           <Trophy size={48} className="text-white/20" />
         </div>
       </Card>
+      </div>
+      
+      {/* Activity Feed Sidebar */}
+      <div className="hidden xl:block w-96">
+        <div className="sticky top-6">
+          <TeamActivityFeed 
+            className="h-[calc(100vh-8rem)] overflow-hidden" 
+            compact={true}
+            limit={15}
+          />
+        </div>
+      </div>
     </div>
   );
 };

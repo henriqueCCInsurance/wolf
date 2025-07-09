@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, FileText, AlertCircle, CheckCircle, Download, Target, PhoneCall, Lock } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle, CheckCircle, Download, Target, PhoneCall, Lock, Settings, Cloud } from 'lucide-react';
 import Papa from 'papaparse';
 import { Contact } from '@/types';
 import Button from '@/components/common/Button';
 import { useAppStore } from '@/store';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
 import { CompanyIntelligenceService } from '@/services/companyIntelligence';
+import { zohoCRMService, ZohoFieldMapping } from '@/services/zohoCRM';
+import ZohoFieldMapper from '@/components/crm/ZohoFieldMapper';
 
 interface ContactImporterProps {
   isOpen: boolean;
@@ -32,6 +34,10 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'complete'>('upload');
   const [contactsLocked, setContactsLocked] = useState(false);
   const [gatheringIntelligence, setGatheringIntelligence] = useState(false);
+  const [sourceType, setSourceType] = useState<'csv' | 'zoho'>('csv');
+  const [, setZohoContacts] = useState<any[]>([]);
+  const [showFieldMapper, setShowFieldMapper] = useState(false);
+  const [zohoFieldMapping, setZohoFieldMapping] = useState<ZohoFieldMapping>(zohoCRMService.getFieldMapping());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const requiredFields = [
@@ -42,6 +48,10 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
     { key: 'email', label: 'Email', required: false },
     { key: 'phone', label: 'Phone', required: false },
     { key: 'address', label: 'Address', required: false },
+    { key: 'employeeCount', label: 'Employee Count', required: false },
+    { key: 'revenue', label: 'Revenue', required: false },
+    { key: 'persona', label: 'Persona Type', required: false },
+    { key: 'tags', label: 'Tags', required: false },
   ];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,6 +138,10 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
           if (lowerHeader.includes('email') && !autoMappings.email) autoMappings.email = header;
           if (lowerHeader.includes('phone') && !autoMappings.phone) autoMappings.phone = header;
           if (lowerHeader.includes('address') && !autoMappings.address) autoMappings.address = header;
+          if ((lowerHeader.includes('employee') || lowerHeader.includes('size')) && !autoMappings.employeeCount) autoMappings.employeeCount = header;
+          if ((lowerHeader.includes('revenue') || lowerHeader.includes('sales')) && !autoMappings.revenue) autoMappings.revenue = header;
+          if (lowerHeader.includes('persona') && !autoMappings.persona) autoMappings.persona = header;
+          if ((lowerHeader.includes('tag') || lowerHeader.includes('label')) && !autoMappings.tags) autoMappings.tags = header;
         });
         
         setMappings(autoMappings);
@@ -183,7 +197,11 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
         email: mappings.email ? row[mappings.email]?.trim() : undefined,
         phone: phone,
         address: mappings.address ? row[mappings.address]?.trim() : undefined,
-        source: 'csv' as const,
+        employeeCount: mappings.employeeCount ? row[mappings.employeeCount]?.trim() : undefined,
+        revenue: mappings.revenue ? row[mappings.revenue]?.trim() : undefined,
+        persona: mappings.persona ? row[mappings.persona]?.trim() as any : undefined,
+        tags: mappings.tags ? row[mappings.tags]?.trim() : undefined,
+        source: sourceType === 'zoho' ? 'crm' as const : 'csv' as const,
         status: 'pending' as const,
       };
     }).filter(contact => contact.companyName && contact.contactName);
@@ -253,17 +271,20 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
       const sequence = await NetlifyDatabaseService.callSequenceService.create({
         userId,
         name: `Import ${new Date().toLocaleDateString()}`,
-        contacts: savedContacts.map(c => ({
+        contacts: savedContacts.map((c: any) => ({
           id: c.id,
           companyName: c.company,
           contactName: c.name,
           status: 'pending'
         })),
-        contactIds: savedContacts.map(c => c.id),
+        contactIds: savedContacts.map((c: any) => c.id),
         totalContacts: savedContacts.length,
         status: 'planned',
         sprintSize: Math.min(savedContacts.length, 25),
-        mode: 'imported'
+        mode: 'imported',
+        updatedAt: new Date(),
+        contactedCount: 0,
+        qualifiedCount: 0
       });
       
       // Store sequence ID in app store for navigation
@@ -283,7 +304,10 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
               companyName: company,
               intelligenceData: intel,
               source: 'web-search',
-              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+              industry: null,
+              employeeCount: null,
+              revenue: null
             });
           }
           setGatheringIntelligence(false);
@@ -295,7 +319,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
       
     } catch (error) {
       console.error('Error saving contacts to database:', error);
-      setErrors([`Failed to save contacts: ${error.message}`]);
+      setErrors([`Failed to save contacts: ${error instanceof Error ? error.message : String(error)}`]);
       setGatheringIntelligence(false);
       setContactsLocked(false);
       return;
@@ -315,7 +339,11 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
         'Industry': 'Technology',
         'Email': 'john.smith@acme.com',
         'Phone': '+1-555-0123',
-        'Address': '123 Business St, City, State 12345'
+        'Address': '123 Business St, City, State 12345',
+        'Employee Count': '500-1000',
+        'Revenue': '$10M-$50M',
+        'Persona Type': 'cost-conscious-employer',
+        'Tags': 'hot-lead, technology'
       },
       {
         'Company Name': 'Global Industries',
@@ -324,7 +352,11 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
         'Industry': 'Manufacturing',
         'Email': 'sarah.j@global.com',
         'Phone': '+1-555-0124',
-        'Address': '456 Industry Ave, City, State 12346'
+        'Address': '456 Industry Ave, City, State 12346',
+        'Employee Count': '1000-5000',
+        'Revenue': '$50M-$100M',
+        'Persona Type': 'roi-focused-executive',
+        'Tags': 'enterprise, manufacturing'
       }
     ];
 
@@ -353,7 +385,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Import Contacts</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Upload CSV files from Apollo, ZoomInfo, or other platforms</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Upload CSV files or sync from Zoho CRM</p>
             </div>
             <button
               onClick={onClose}
@@ -367,6 +399,30 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
             {/* Step 1: Upload */}
             {step === 'upload' && (
               <div className="space-y-6">
+                {/* Source Type Selection */}
+                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Import Source:</span>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      value="csv"
+                      checked={sourceType === 'csv'}
+                      onChange={(e) => setSourceType(e.target.value as 'csv' | 'zoho')}
+                      className="text-primary-600"
+                    />
+                    <span className="text-sm text-gray-700">CSV File</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      value="zoho"
+                      checked={sourceType === 'zoho'}
+                      onChange={(e) => setSourceType(e.target.value as 'csv' | 'zoho')}
+                      className="text-primary-600"
+                    />
+                    <span className="text-sm text-gray-700">Zoho CRM</span>
+                  </label>
+                </div>
                 {/* Sample CSV Download */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
@@ -387,10 +443,12 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                   </div>
                 </div>
 
-                {/* File Upload */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Upload CSV File</h3>
+                {sourceType === 'csv' ? (
+                  <>
+                    {/* File Upload */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Upload CSV File</h3>
                   <p className="text-gray-600 mb-4">
                     Drag and drop your CSV file here, or click to browse
                   </p>
@@ -407,15 +465,88 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                     Choose File
                   </Button>
                   
-                  {file && (
-                    <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
-                      Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                      {file && (
+                        <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                          Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Zoho CRM Import */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <Cloud className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Sync from Zoho CRM</h3>
+                      <p className="text-gray-600 mb-4">
+                        Connect to your Zoho CRM account to import contacts
+                      </p>
+                      
+                      <div className="flex items-center gap-3 justify-center">
+                        <Button
+                          onClick={async () => {
+                            setIsProcessing(true);
+                            try {
+                              const contacts = await zohoCRMService.getAllContacts(1, 100);
+                              setZohoContacts(contacts);
+                              // Convert to CSV-like format for processing
+                              const csvLikeData = contacts.map(contact => ({
+                                'Company Name': contact.companyName || '',
+                                'Contact Name': contact.contactName || '',
+                                'Position': contact.position || '',
+                                'Industry': contact.industry || '',
+                                'Email': contact.email || '',
+                                'Phone': contact.phone || '',
+                                'Address': contact.address || '',
+                                'Employee Count': contact.employeeCount || '',
+                                'Revenue': contact.revenue || '',
+                                'Persona Type': contact.persona || '',
+                                'Tags': Array.isArray(contact.tags) ? contact.tags.join(', ') : contact.tags || ''
+                              }));
+                              setCsvData(csvLikeData);
+                              
+                              // Auto-map fields
+                              const autoMappings: Record<string, string> = {
+                                companyName: 'Company Name',
+                                contactName: 'Contact Name',
+                                position: 'Position',
+                                industry: 'Industry',
+                                email: 'Email',
+                                phone: 'Phone',
+                                address: 'Address',
+                                employeeCount: 'Employee Count',
+                                revenue: 'Revenue',
+                                persona: 'Persona Type',
+                                tags: 'Tags'
+                              };
+                              setMappings(autoMappings);
+                              
+                              setStep('preview');
+                            } catch (error) {
+                              console.error('Error fetching Zoho contacts:', error);
+                              setErrors(['Failed to fetch contacts from Zoho CRM. Please check your configuration.']);
+                            }
+                            setIsProcessing(false);
+                          }}
+                        >
+                          <Cloud className="w-4 h-4" />
+                          Fetch Contacts
+                        </Button>
+                        
+                        <Button
+                          variant="secondary"
+                          onClick={() => setShowFieldMapper(true)}
+                        >
+                          <Settings className="w-4 h-4" />
+                          Configure Fields
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Platform-specific instructions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-2">Apollo.io Export</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -426,6 +557,12 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                     <h4 className="font-medium text-gray-900 mb-2">ZoomInfo Export</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
                       Select contacts → Export → Download CSV
+                    </p>
+                  </div>
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Zoho CRM Sync</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Configure field mapping → Fetch contacts directly
                     </p>
                   </div>
                 </div>
@@ -559,6 +696,9 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Email
                           </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Persona
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -570,6 +710,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
                             <td className="px-4 py-3 text-sm text-gray-900">{contact.industry}</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{contact.phone || 'N/A'}</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{contact.email || 'N/A'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{contact.persona || 'N/A'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -652,6 +793,17 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
           </div>
         </motion.div>
       </div>
+      
+      {/* Zoho Field Mapper Modal */}
+      <ZohoFieldMapper
+        isOpen={showFieldMapper}
+        onClose={() => setShowFieldMapper(false)}
+        currentMapping={zohoFieldMapping}
+        onMappingUpdate={(newMapping) => {
+          setZohoFieldMapping(newMapping);
+          zohoCRMService.updateFieldMapping(newMapping);
+        }}
+      />
     </AnimatePresence>
   );
 };

@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { FileText, Download, ExternalLink, Search, Filter, BookOpen, Target, Users, TrendingUp, Briefcase, DollarSign } from 'lucide-react';
+import { FileText, Download, ExternalLink, Search, Filter, BookOpen, Target, Users, TrendingUp, Briefcase, DollarSign, Shield } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Input from '@/components/common/Input';
 import Button from '@/components/common/Button';
+import CompetitiveIntelligence from '@/components/intelligence/CompetitiveIntelligence';
 import { motion } from 'framer-motion';
 
 interface Resource {
   id: string;
   title: string;
   description: string;
-  category: 'branding' | 'sales' | 'research' | 'events' | 'thought-leadership';
+  category: 'branding' | 'sales' | 'research' | 'events' | 'thought-leadership' | 'competitive';
   filename: string;
   size: string;
   icon: React.ElementType;
@@ -80,12 +81,24 @@ const resources: Resource[] = [
     size: '96 KB',
     icon: DollarSign,
     lastUpdated: '2024'
+  },
+  {
+    id: '7',
+    title: 'Competitive Intelligence Battle Cards',
+    description: 'Interactive competitive intelligence tool with objection handlers, win/loss analysis, and battle cards for major competitors.',
+    category: 'competitive',
+    filename: 'competitive-intelligence',
+    size: 'Interactive',
+    icon: Shield,
+    featured: true,
+    lastUpdated: '2025'
   }
 ];
 
 const Resources: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showCompetitiveIntel, setShowCompetitiveIntel] = useState(false);
 
   const categories = [
     { id: 'all', label: 'All Resources', count: resources.length },
@@ -93,7 +106,8 @@ const Resources: React.FC = () => {
     { id: 'sales', label: 'Sales Materials', count: resources.filter(r => r.category === 'sales').length },
     { id: 'research', label: 'Research', count: resources.filter(r => r.category === 'research').length },
     { id: 'events', label: 'Events', count: resources.filter(r => r.category === 'events').length },
-    { id: 'thought-leadership', label: 'Thought Leadership', count: resources.filter(r => r.category === 'thought-leadership').length }
+    { id: 'thought-leadership', label: 'Thought Leadership', count: resources.filter(r => r.category === 'thought-leadership').length },
+    { id: 'competitive', label: 'Competitive Intelligence', count: resources.filter(r => r.category === 'competitive').length }
   ];
 
   const filteredResources = resources.filter(resource => {
@@ -117,8 +131,35 @@ const Resources: React.FC = () => {
   };
 
   const handleView = (filename: string) => {
-    window.open(`/resources/${filename}`, '_blank');
+    if (filename === 'competitive-intelligence') {
+      setShowCompetitiveIntel(true);
+    } else {
+      window.open(`/resources/${filename}`, '_blank');
+    }
   };
+
+  // Show competitive intelligence component if selected
+  if (showCompetitiveIntel) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Competitive Intelligence</h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              Interactive battle cards and competitive analysis tool
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowCompetitiveIntel(false)}
+          >
+            Back to Resources
+          </Button>
+        </div>
+        <CompetitiveIntelligence showFilters={true} maxCompetitors={10} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -199,18 +240,29 @@ const Resources: React.FC = () => {
                             onClick={() => handleView(resource.filename)}
                             className="flex-1"
                           >
-                            <ExternalLink size={14} className="mr-1" />
-                            View
+                            {resource.filename === 'competitive-intelligence' ? (
+                              <>
+                                <Shield size={14} className="mr-1" />
+                                Open Tool
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink size={14} className="mr-1" />
+                                View
+                              </>
+                            )}
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(resource.filename, resource.title)}
-                            className="flex-1"
-                          >
-                            <Download size={14} className="mr-1" />
-                            Download
-                          </Button>
+                          {resource.filename !== 'competitive-intelligence' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownload(resource.filename, resource.title)}
+                              className="flex-1"
+                            >
+                              <Download size={14} className="mr-1" />
+                              Download
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -260,17 +312,23 @@ const Resources: React.FC = () => {
                         <button
                           onClick={() => handleView(resource.filename)}
                           className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                          title="View PDF"
+                          title={resource.filename === 'competitive-intelligence' ? 'Open Tool' : 'View PDF'}
                         >
-                          <ExternalLink size={16} />
+                          {resource.filename === 'competitive-intelligence' ? (
+                            <Shield size={16} />
+                          ) : (
+                            <ExternalLink size={16} />
+                          )}
                         </button>
-                        <button
-                          onClick={() => handleDownload(resource.filename, resource.title)}
-                          className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                          title="Download PDF"
-                        >
-                          <Download size={16} />
-                        </button>
+                        {resource.filename !== 'competitive-intelligence' && (
+                          <button
+                            onClick={() => handleDownload(resource.filename, resource.title)}
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                            title="Download PDF"
+                          >
+                            <Download size={16} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </Card>

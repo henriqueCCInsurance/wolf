@@ -8,7 +8,6 @@ import {
   Calendar, 
   Award, 
   BarChart, 
-  FileSpreadsheet,
   Database,
   Users,
   Phone,
@@ -30,6 +29,7 @@ import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
+import ExportMenu from '@/components/common/ExportMenu';
 import { useAppStore } from '@/store';
 import { CallLog } from '@/types';
 import { format } from 'date-fns';
@@ -301,31 +301,8 @@ const EnhancedPostGame: React.FC = () => {
     setErrors({});
   };
 
-  const exportToSpreadsheet = () => {
-    const data = allCallLogs.map(log => ({
-      Date: format(log.createdAt, 'yyyy-MM-dd'),
-      Company: log.leadId,
-      Outcome: log.outcome,
-      Duration: log.callDuration,
-      Intelligence: log.intel,
-      'Best Talking Point': log.bestTalkingPoint,
-      'Key Takeaway': log.keyTakeaway,
-      'Next Steps': log.additionalInfo?.nextSteps || '',
-      'Revenue Potential': '$50,000' // Mock data
-    }));
-
-    const csv = [
-      Object.keys(data[0]).join(','),
-      ...data.map(row => Object.values(row).map(val => `"${val}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `call-analytics-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExportComplete = (format: string) => {
+    console.log(`Export completed in ${format} format`);
   };
 
   const syncToCRM = () => {
@@ -844,10 +821,15 @@ const EnhancedPostGame: React.FC = () => {
                     <option value="90d">Last 90 Days</option>
                     <option value="all">All Time</option>
                   </select>
-                  <Button onClick={exportToSpreadsheet} variant="secondary">
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
+                  <ExportMenu
+                    data={{
+                      callLogs: allCallLogs,
+                      analytics: analytics
+                    }}
+                    dataType="analytics"
+                    filename="call-analytics"
+                    onExportComplete={handleExportComplete}
+                  />
                 </div>
               </div>
 

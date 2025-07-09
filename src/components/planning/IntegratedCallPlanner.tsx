@@ -19,7 +19,7 @@ import {
   ArrowRight,
   CheckCircle
 } from 'lucide-react';
-import { CallSequence, Contact, PersonaType, ContentItem } from '@/types';
+import { CallSequence, Contact, PersonaType, ContentItem, ContactRelationship } from '@/types';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -27,12 +27,15 @@ import Select from '@/components/common/Select';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
 import ContentLibrary from '@/components/common/ContentLibrary';
 import EnhancedLiveIntelligence from '@/components/intelligence/EnhancedLiveIntelligence';
+import RelationshipMap from '@/components/intelligence/RelationshipMap';
 import ContactImporter from './ContactImporter';
+import DealScoreBadge from '@/components/common/DealScoreBadge';
 import { useAppStore } from '@/store';
 import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
 import { EnhancedWebSearchService } from '@/services/enhancedWebSearch';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
+import { DealScoringService } from '@/services/dealScoring';
 
 type PlanningMode = 'single-prospect' | 'imported-list' | 'crm-sync';
 
@@ -48,7 +51,8 @@ const IntegratedCallPlanner: React.FC = () => {
     setCurrentModule,
     advancedMode,
     activeSequenceId,
-    callSequences
+    callSequences,
+    callLogs
   } = useAppStore();
 
   const [mode, setMode] = useState<PlanningMode | null>(null);
@@ -59,6 +63,20 @@ const IntegratedCallPlanner: React.FC = () => {
   const [contactsLocked, setContactsLocked] = useState(false);
   const [showGuideSection, setShowGuideSection] = useState(false);
   const [gatheringIntelligence, setGatheringIntelligence] = useState(false);
+  const [sortBy, setSortBy] = useState<'score' | 'name' | 'company'>('score');
+
+  // Function to calculate scores for all contacts
+  const calculateContactScores = (contactList: Contact[]) => {
+    const { callLogs } = useAppStore.getState();
+    return contactList.map(contact => {
+      const score = DealScoringService.calculateScore(contact, callLogs);
+      return {
+        ...contact,
+        score: score.total,
+        scoreCategory: score.category
+      };
+    });
+  };
 
   // Single prospect form data
   const [formData, setFormData] = useState({
@@ -83,14 +101,14 @@ const IntegratedCallPlanner: React.FC = () => {
         if (sequence) {
           try {
             // TODO: Get userId from authentication context
-            const userId = 'current-user';
+            // const userId = 'current-user';
             
             // Load contacts from database if they have IDs
             if (sequence.contactIds && sequence.contactIds.length > 0) {
               const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
               
               // Convert database contacts to UI contacts
-              const uiContacts = dbContacts.map(dbContact => ({
+              const uiContacts = dbContacts.map((dbContact: any) => ({
                 id: dbContact.id,
                 companyName: dbContact.company,
                 contactName: dbContact.name,
@@ -107,7 +125,7 @@ const IntegratedCallPlanner: React.FC = () => {
               }));
               
               setContacts(uiContacts);
-              setSelectedContacts(new Set(uiContacts.map(c => c.id)));
+              setSelectedContacts(new Set(uiContacts.map((c: any) => c.id)));
               setContactsLocked(true);
               setShowGuideSection(true);
               setCurrentSequence(sequence);
@@ -272,7 +290,9 @@ const IntegratedCallPlanner: React.FC = () => {
         status: 'pending'
       };
       
-      setContacts([contact]);
+      // Calculate score for the contact
+      const scoredContacts = calculateContactScores([contact]);
+      setContacts(scoredContacts);
       setSelectedContacts(new Set([contact.id]));
       
       // Auto-lock the prospect in single prospect mode
@@ -364,7 +384,8 @@ const IntegratedCallPlanner: React.FC = () => {
   };
 
   const handleContactsImported = (importedContacts: Contact[]) => {
-    setContacts(importedContacts);
+    const scoredContacts = calculateContactScores(importedContacts);
+    setContacts(scoredContacts);
     setShowImporter(false);
   };
 
@@ -421,8 +442,11 @@ const IntegratedCallPlanner: React.FC = () => {
           contactIds: savedContacts.map(c => c.id || c.id),
           totalContacts: savedContacts.length,
           status: 'planned',
-          sprintSize: selectedSprintSize,
-          mode: mode === 'imported-list' ? 'imported' : mode === 'crm-sync' ? 'crm-sync' : 'standalone'
+          sprintSize: 10, // Default sprint size
+          mode: mode === 'imported-list' ? 'imported' : mode === 'crm-sync' ? 'crm-sync' : 'standalone',
+          updatedAt: new Date(),
+          contactedCount: 0,
+          qualifiedCount: 0
         });
         
         setCurrentSequence(sequence);
@@ -1194,8 +1218,20 @@ const IntegratedCallPlanner: React.FC = () => {
         {contacts.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                {contacts.length} contact{contacts.length !== 1 ? 's' : ''} • {selectedContacts.size} selected
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  {contacts.length} contact{contacts.length !== 1 ? 's' : ''} • {selectedContacts.size} selected
+                </div>
+                <Select
+                  value={sortBy}
+                  onChange={(value) => setSortBy(value as 'score' | 'name' | 'company')}
+                  options={[
+                    { value: 'score', label: 'Sort by Score' },
+                    { value: 'name', label: 'Sort by Name' },
+                    { value: 'company', label: 'Sort by Company' }
+                  ]}
+                  className="w-40"
+                />
               </div>
               {contactsLocked && (
                 <div className="flex items-center text-sm text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
@@ -1206,7 +1242,23 @@ const IntegratedCallPlanner: React.FC = () => {
             </div>
             
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {contacts.map((contact) => (
+              {/* Sort contacts based on selected criteria */}
+              {[...contacts]
+                .sort((a, b) => {
+                  switch (sortBy) {
+                    case 'score':
+                      return (b.score || 0) - (a.score || 0);
+                    case 'name':
+                      return a.contactName.localeCompare(b.contactName);
+                    case 'company':
+                      return a.companyName.localeCompare(b.companyName);
+                    default:
+                      return 0;
+                  }
+                })
+                .map((contact) => {
+                  const score = DealScoringService.calculateScore(contact, callLogs);
+                  return (
                 <div 
                   key={contact.id}
                   className={`p-4 border rounded-lg transition-all ${
@@ -1225,6 +1277,10 @@ const IntegratedCallPlanner: React.FC = () => {
                     />
                     
                     <div className="flex-1 space-y-3">
+                      {/* Score Badge */}
+                      <div className="flex justify-between items-start mb-2">
+                        <DealScoreBadge score={score} size="sm" />
+                      </div>
                       {/* Row 1: Company and Contact Name */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
@@ -1333,7 +1389,8 @@ const IntegratedCallPlanner: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+                  );
+                })}
             </div>
           </div>
         ) : (
@@ -1347,6 +1404,60 @@ const IntegratedCallPlanner: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Relationship Map - Show when we have multiple contacts from the same company */}
+      {contactsLocked && (() => {
+        // Group contacts by company
+        const companyGroups = contacts.reduce((acc, contact) => {
+          if (!acc[contact.companyName]) {
+            acc[contact.companyName] = [];
+          }
+          acc[contact.companyName].push(contact);
+          return acc;
+        }, {} as Record<string, Contact[]>);
+
+        // Find companies with multiple contacts
+        const companiesWithMultipleContacts = Object.entries(companyGroups)
+          .filter(([_, contacts]) => contacts.length > 1)
+          .map(([companyName, contacts]) => ({ companyName, contacts }));
+
+        return companiesWithMultipleContacts.length > 0 && (
+          <div className="space-y-4">
+            {companiesWithMultipleContacts.map(({ companyName, contacts: companyContacts }) => (
+              <Card
+                key={companyName}
+                title={`${companyName} - Organizational Structure`}
+                subtitle={`${companyContacts.length} contacts mapped`}
+              >
+                <RelationshipMap
+                  contacts={companyContacts}
+                  companyName={companyName}
+                  onUpdateRelationships={(relationships: ContactRelationship[]) => {
+                    // Update relationships in the contacts
+                    const updatedContacts = contacts.map(contact => {
+                      if (contact.companyName === companyName) {
+                        const contactRelationships = relationships.filter(
+                          r => r.fromContactId === contact.id
+                        );
+                        return {
+                          ...contact,
+                          relationships: contactRelationships
+                        };
+                      }
+                      return contact;
+                    });
+                    setContacts(updatedContacts);
+                    
+                    // Also update in localStorage for persistence
+                    localStorage.setItem('wolf-den-locked-contacts', JSON.stringify(updatedContacts));
+                  }}
+                  editable={true}
+                />
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Guide Section - Shows after locking contacts */}
       {contactsLocked && showGuideSection && (

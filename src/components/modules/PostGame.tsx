@@ -9,9 +9,12 @@ import { useAppStore } from '@/store';
 import { CallLog } from '@/types';
 import { format } from 'date-fns';
 import { exportCallLogsToCSV, exportPerformanceMetricsToCSV, exportCompleteDataset, generateCallInsights } from '@/utils/exportUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackCallMade, trackMeetingBooked } from '@/services/activityTracking';
 
 const PostGame: React.FC = () => {
   const { prospect, callLogs, addCallLog, battleCards, activeCallDuration, clearCallLogs } = useAppStore();
+  const { user } = useAuth();
   
   const [formData, setFormData] = useState({
     outcome: '',
@@ -24,7 +27,14 @@ const PostGame: React.FC = () => {
     companyInsights: '',
     nextSteps: '',
     meetingType: '',
-    followUpDate: ''
+    followUpDate: '',
+    // Competitive intelligence fields
+    competitorMentioned: '',
+    competitorStrengths: '',
+    competitorWeaknesses: '',
+    switchingReasons: '',
+    decisionFactors: '',
+    competitiveResponse: ''
   });
   
   const [showDemoData, setShowDemoData] = useState(false);
@@ -80,6 +90,14 @@ const PostGame: React.FC = () => {
       nextSteps: "Send benefits audit worksheet, schedule all-hands demo for next Friday",
       meetingType: "discovery",
       followUpDate: "2025-07-02"
+    },
+    competitiveEncounter: {
+      competitorMentioned: "UnitedHealthcare",
+      competitorStrengths: "They mentioned United's large network and technology platform",
+      competitorWeaknesses: "Complained about poor customer service and generic solutions",
+      switchingReasons: "Looking for more personalized service and better employee engagement",
+      decisionFactors: "Service quality is more important than just cost",
+      competitiveResponse: "Emphasized our local expertise and personalized approach vs. call centers"
     }
   };
   
@@ -96,7 +114,14 @@ const PostGame: React.FC = () => {
         companyInsights: demoCallData.additionalInfo.companyInsights || '',
         nextSteps: demoCallData.additionalInfo.nextSteps || '',
         meetingType: demoCallData.additionalInfo.meetingType || '',
-        followUpDate: demoCallData.additionalInfo.followUpDate || ''
+        followUpDate: demoCallData.additionalInfo.followUpDate || '',
+        // Competitive intelligence
+        competitorMentioned: demoCallData.competitiveEncounter?.competitorMentioned || '',
+        competitorStrengths: demoCallData.competitiveEncounter?.competitorStrengths || '',
+        competitorWeaknesses: demoCallData.competitiveEncounter?.competitorWeaknesses || '',
+        switchingReasons: demoCallData.competitiveEncounter?.switchingReasons || '',
+        decisionFactors: demoCallData.competitiveEncounter?.decisionFactors || '',
+        competitiveResponse: demoCallData.competitiveEncounter?.competitiveResponse || ''
       });
     }
   }, [showDemoData]);
@@ -135,11 +160,37 @@ const PostGame: React.FC = () => {
         nextSteps: formData.nextSteps,
         meetingType: formData.meetingType,
         followUpDate: formData.followUpDate
-      }
+      },
+      competitiveEncounter: formData.competitorMentioned ? {
+        competitorMentioned: formData.competitorMentioned,
+        competitorStrengths: formData.competitorStrengths,
+        competitorWeaknesses: formData.competitorWeaknesses,
+        switchingReasons: formData.switchingReasons,
+        decisionFactors: formData.decisionFactors,
+        competitiveResponse: formData.competitiveResponse
+      } : undefined
     };
     
     try {
       await addCallLog(callLog);
+      
+      // Track activity based on outcome
+      if (user) {
+        trackCallMade(user, {
+          companyName: prospect?.companyName || 'Unknown',
+          contactName: prospect?.contactName || 'Unknown',
+          outcome: formData.outcome,
+          duration: formData.callDuration
+        });
+        
+        if (formData.outcome === 'meeting-booked') {
+          trackMeetingBooked(user, {
+            companyName: prospect?.companyName || 'Unknown',
+            contactName: prospect?.contactName || 'Unknown',
+            meetingType: formData.meetingType
+          });
+        }
+      }
       
       // Reset form
       setFormData({
@@ -153,7 +204,14 @@ const PostGame: React.FC = () => {
         companyInsights: '',
         nextSteps: '',
         meetingType: '',
-        followUpDate: ''
+        followUpDate: '',
+        // Competitive intelligence fields
+        competitorMentioned: '',
+        competitorStrengths: '',
+        competitorWeaknesses: '',
+        switchingReasons: '',
+        decisionFactors: '',
+        competitiveResponse: ''
       });
       setShowDemoData(false);
       
@@ -364,6 +422,49 @@ const PostGame: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Competitive Intelligence */}
+            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <h4 className="font-semibold text-orange-900 mb-3">🛡️ Competitive Intelligence</h4>
+              <div className="space-y-4">
+                <Input
+                  label="Competitor Mentioned"
+                  value={formData.competitorMentioned}
+                  onChange={(value) => setFormData({ ...formData, competitorMentioned: value })}
+                  placeholder="e.g., UnitedHealthcare, Humana, local broker name"
+                />
+                <Input
+                  label="Competitor Strengths Mentioned"
+                  value={formData.competitorStrengths}
+                  onChange={(value) => setFormData({ ...formData, competitorStrengths: value })}
+                  placeholder="What did they say the competitor does well?"
+                />
+                <Input
+                  label="Competitor Weaknesses Mentioned"
+                  value={formData.competitorWeaknesses}
+                  onChange={(value) => setFormData({ ...formData, competitorWeaknesses: value })}
+                  placeholder="What complaints or issues did they mention?"
+                />
+                <Input
+                  label="Reasons for Switching"
+                  value={formData.switchingReasons}
+                  onChange={(value) => setFormData({ ...formData, switchingReasons: value })}
+                  placeholder="Why are they considering a change?"
+                />
+                <Input
+                  label="Decision Factors"
+                  value={formData.decisionFactors}
+                  onChange={(value) => setFormData({ ...formData, decisionFactors: value })}
+                  placeholder="What factors are most important in their decision?"
+                />
+                <Input
+                  label="Your Competitive Response"
+                  value={formData.competitiveResponse}
+                  onChange={(value) => setFormData({ ...formData, competitiveResponse: value })}
+                  placeholder="How did you position against the competitor?"
+                />
+              </div>
+            </div>
             
             <Button onClick={handleSubmit} className="w-full">
               <Save className="w-4 h-4 mr-2" />
@@ -494,6 +595,28 @@ const PostGame: React.FC = () => {
                         <div>
                           <span className="font-medium text-gray-700">Next Steps:</span>
                           <span className="text-gray-600 ml-2 text-xs">{log.additionalInfo.nextSteps}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Competitive Intelligence */}
+                  {log.competitiveEncounter && log.competitiveEncounter.competitorMentioned && (
+                    <div className="mt-3 pt-2 border-t border-orange-100">
+                      <div className="mb-2">
+                        <span className="font-medium text-orange-700">🛡️ Competitor:</span>
+                        <span className="text-orange-600 ml-2 text-xs font-medium">{log.competitiveEncounter.competitorMentioned}</span>
+                      </div>
+                      {log.competitiveEncounter.competitorWeaknesses && (
+                        <div className="mb-1">
+                          <span className="font-medium text-gray-700">Weakness:</span>
+                          <span className="text-gray-600 ml-2 text-xs">{log.competitiveEncounter.competitorWeaknesses}</span>
+                        </div>
+                      )}
+                      {log.competitiveEncounter.competitiveResponse && (
+                        <div>
+                          <span className="font-medium text-gray-700">Response:</span>
+                          <span className="text-gray-600 ml-2 text-xs">{log.competitiveEncounter.competitiveResponse}</span>
                         </div>
                       )}
                     </div>
