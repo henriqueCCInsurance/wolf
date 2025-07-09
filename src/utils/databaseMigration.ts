@@ -58,7 +58,7 @@ export async function migrateLocalStorageToDatabase(userId: string): Promise<{
     // 3. Migrate locked contacts
     if (localData.lockedContacts && localData.lockedContacts.length > 0) {
       try {
-        const contactsToMigrate = localData.lockedContacts.map(contact => ({
+        const contactsToMigrate = localData.lockedContacts.map((contact: any) => ({
           userId,
           company: contact.companyName || contact.company || 'Unknown Company',
           name: contact.contactName || contact.name || 'Unknown Contact',
@@ -113,7 +113,7 @@ export async function migrateLocalStorageToDatabase(userId: string): Promise<{
     // 5. Migrate company intelligence
     if (localData.currentCompanyIntelligence) {
       try {
-        const intel = localData.currentCompanyIntelligence;
+        const intel: any = localData.currentCompanyIntelligence;
         if (intel.companyName || intel.company) {
           await NetlifyDatabaseService.companyIntelligenceService.set({
             companyName: intel.companyName || intel.company,

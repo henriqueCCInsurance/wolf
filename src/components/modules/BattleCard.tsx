@@ -13,7 +13,7 @@ import { personas } from '@/data/personas';
 import { industries } from '@/data/industries';
 import { callObjectives } from '@/data/content';
 import { getClosingsByPersonaAndType, getSuccessRateCategory } from '@/data/strategicClosings';
-import { Contact, PersonaType, ContactRelationship } from '@/types';
+import { Contact, PersonaType, ContactRelationship, DatabaseContact } from '@/types';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackBattleCardCreated } from '@/services/activityTracking';
@@ -47,7 +47,7 @@ const CallGuide: React.FC = () => {
               const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
               
               // Convert database contacts to UI contacts
-              const uiContacts = dbContacts.map((dbContact: any) => ({
+              const uiContacts = dbContacts.map((dbContact: DatabaseContact): Contact => ({
                 id: dbContact.id,
                 companyName: dbContact.company,
                 contactName: dbContact.name,
@@ -55,11 +55,13 @@ const CallGuide: React.FC = () => {
                 position: dbContact.title,
                 phone: dbContact.phone,
                 email: dbContact.email,
-                industry: dbContact.industry,
+                industry: dbContact.industry || '',
                 employeeCount: dbContact.employeeCount,
                 revenue: dbContact.revenue,
                 persona: dbContact.personaType as PersonaType,
-                status: dbContact.status
+                status: dbContact.status as Contact['status'],
+                source: 'crm',
+                notes: dbContact.notes
               }));
               
               setLockedContacts(uiContacts);

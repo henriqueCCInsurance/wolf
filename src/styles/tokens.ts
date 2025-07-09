@@ -289,10 +289,13 @@ export type Gradient = keyof typeof designTokens.gradients;
 // Utility functions
 export const getColor = (color: string, scale?: ColorScale) => {
   const [colorName, colorScale] = color.split('-');
+  const colorObj = designTokens.colors[colorName as keyof typeof designTokens.colors];
+  if (!colorObj) return undefined;
+  
   if (scale) {
-    return designTokens.colors[colorName as keyof typeof designTokens.colors]?.[scale];
+    return (colorObj as any)[scale];
   }
-  return designTokens.colors[colorName as keyof typeof designTokens.colors]?.[colorScale as ColorScale];
+  return (colorObj as any)[colorScale as unknown as ColorScale];
 };
 
 export const getSpacing = (scale: SpacingScale) => {

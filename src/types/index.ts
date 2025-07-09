@@ -165,6 +165,28 @@ export interface Contact {
   relationships?: ContactRelationship[];
 }
 
+// Database Contact type that matches the schema
+export interface DatabaseContact {
+  id: string;
+  userId: string;
+  company: string;
+  name: string;
+  title?: string;
+  phone?: string;
+  email?: string;
+  linkedinUrl?: string;
+  industry?: string;
+  employeeCount?: string;
+  revenue?: string;
+  personaType?: string;
+  status: 'new' | 'contacted' | 'qualified' | 'disqualified' | 'closed';
+  tags?: string[];
+  notes?: string;
+  companyIntelligence?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Performance & Analytics Types
 export interface PerformanceMetrics {
   userId: string;

@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { users, callLogs, battleCards, callSequences, contacts, userPreferences, companyIntelligence, type CallLog, type BattleCard, type CallSequence, type Contact, type NewContact, type UserPreferences, type CompanyIntelligence } from '@/db/schema';
+import { users, callLogs, battleCards, callSequences, contacts, userPreferences, companyIntelligence, type CallLog, type BattleCard, type CallSequence, type Contact as DatabaseContact, type NewContact, type UserPreferences, type CompanyIntelligence } from '@/db/schema';
 import { eq, desc, and, inArray, or, ilike } from 'drizzle-orm';
 
 // User operations
@@ -121,10 +121,10 @@ export const analyticsService = {
 
     const stats = {
       total: logs.length,
-      meetingsBooked: logs.filter((l: any) => l.outcome === 'meeting-booked').length,
-      nurture: logs.filter((l: any) => l.outcome === 'nurture').length,
-      disqualified: logs.filter((l: any) => l.outcome === 'disqualified').length,
-      followUp: logs.filter((l: any) => l.outcome === 'follow-up').length,
+      meetingsBooked: logs.filter((l: CallLog) => l.outcome === 'meeting-booked').length,
+      nurture: logs.filter((l: CallLog) => l.outcome === 'nurture').length,
+      disqualified: logs.filter((l: CallLog) => l.outcome === 'disqualified').length,
+      followUp: logs.filter((l: CallLog) => l.outcome === 'follow-up').length,
     };
 
     return stats;
@@ -138,7 +138,7 @@ export const analyticsService = {
       .limit(100);
 
     // Aggregate talking points
-    const talkingPointCounts = logs.reduce((acc: Record<string, number>, log: any) => {
+    const talkingPointCounts = logs.reduce((acc: Record<string, number>, log: CallLog) => {
       const point = log.bestTalkingPoint;
       acc[point] = (acc[point] || 0) + 1;
       return acc;
@@ -218,7 +218,7 @@ export const contactService = {
     return contact;
   },
 
-  async update(id: string, userId: string, data: Partial<Contact>) {
+  async update(id: string, userId: string, data: Partial<DatabaseContact>) {
     const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = data;
     await db.update(contacts)
       .set({ ...updateData, updatedAt: new Date() })
@@ -228,7 +228,7 @@ export const contactService = {
       ));
   },
 
-  async updateStatus(id: string, userId: string, status: Contact['status']) {
+  async updateStatus(id: string, userId: string, status: DatabaseContact['status']) {
     await db.update(contacts)
       .set({ status, updatedAt: new Date() })
       .where(and(

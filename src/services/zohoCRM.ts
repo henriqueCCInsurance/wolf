@@ -595,4 +595,4 @@ export const zohoCRMService = new ZohoCRMService({
 });
 
 export default ZohoCRMService;
-export type { ZohoFieldMapping, ZohoContact };
+export type { ZohoContact };

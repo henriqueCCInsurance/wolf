@@ -119,7 +119,7 @@ export function runSuccessPredictionDemo(): void {
   const predictionService = SuccessPredictionService.getInstance();
   
   // Test predictions for each sample lead
-  sampleLeads.forEach((lead, index) => {
+  sampleLeads.forEach((lead) => {
     console.log(`\n--- Prediction for ${lead.companyName} (${lead.contactName}) ---`);
     console.log(`Persona: ${lead.persona}`);
     console.log(`Industry: ${lead.industry}`);

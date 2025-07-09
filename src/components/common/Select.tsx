@@ -41,11 +41,14 @@ const Select: React.FC<SelectProps> = ({
   size = 'md',
   success = false,
   searchable = false,
-  multiple = false,
+  multiple = false, // TODO: Implement multiple selection
   maxHeight = 200
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Suppress unused variable warning - TODO: Implement multiple selection
+  void multiple;
   
   const selectedOption = options.find(option => option.value === value);
   

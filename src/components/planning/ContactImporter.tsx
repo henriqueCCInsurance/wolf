@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, FileText, AlertCircle, CheckCircle, Download, Target, PhoneCall, Lock, Settings, Cloud } from 'lucide-react';
 import Papa from 'papaparse';
-import { Contact } from '@/types';
+import { Contact, DatabaseContact } from '@/types';
 import Button from '@/components/common/Button';
 import { useAppStore } from '@/store';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
@@ -194,13 +194,14 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
         contactName: mappings.contactName ? row[mappings.contactName]?.trim() || '' : '',
         industry: mappings.industry ? row[mappings.industry]?.trim() || '' : '',
         position: mappings.position ? row[mappings.position]?.trim() : undefined,
+        title: mappings.position ? row[mappings.position]?.trim() : undefined,
         email: mappings.email ? row[mappings.email]?.trim() : undefined,
         phone: phone,
         address: mappings.address ? row[mappings.address]?.trim() : undefined,
         employeeCount: mappings.employeeCount ? row[mappings.employeeCount]?.trim() : undefined,
         revenue: mappings.revenue ? row[mappings.revenue]?.trim() : undefined,
         persona: mappings.persona ? row[mappings.persona]?.trim() as any : undefined,
-        tags: mappings.tags ? row[mappings.tags]?.trim() : undefined,
+        notes: mappings.tags ? row[mappings.tags]?.trim() : undefined,
         source: sourceType === 'zoho' ? 'crm' as const : 'csv' as const,
         status: 'pending' as const,
       };
@@ -262,7 +263,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
         employeeCount: contact.employeeCount,
         revenue: contact.revenue,
         personaType: contact.persona,
-        status: 'new',
+        status: 'new' as const,
         tags: [],
         notes: contact.notes
       })));
@@ -271,17 +272,19 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
       const sequence = await NetlifyDatabaseService.callSequenceService.create({
         userId,
         name: `Import ${new Date().toLocaleDateString()}`,
-        contacts: savedContacts.map((c: any) => ({
+        contacts: savedContacts.map((c: DatabaseContact) => ({
           id: c.id,
           companyName: c.company,
           contactName: c.name,
-          status: 'pending'
+          status: 'pending' as const,
+          industry: c.industry || '',
+          source: 'csv' as const
         })),
-        contactIds: savedContacts.map((c: any) => c.id),
+        contactIds: savedContacts.map((c: DatabaseContact) => c.id),
         totalContacts: savedContacts.length,
-        status: 'planned',
+        status: 'planned' as const,
         sprintSize: Math.min(savedContacts.length, 25),
-        mode: 'imported',
+        mode: 'imported' as const,
         updatedAt: new Date(),
         contactedCount: 0,
         qualifiedCount: 0

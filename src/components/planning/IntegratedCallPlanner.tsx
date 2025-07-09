@@ -19,7 +19,7 @@ import {
   ArrowRight,
   CheckCircle
 } from 'lucide-react';
-import { CallSequence, Contact, PersonaType, ContentItem, ContactRelationship } from '@/types';
+import { CallSequence, Contact, PersonaType, ContentItem, ContactRelationship, DatabaseContact } from '@/types';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -108,7 +108,7 @@ const IntegratedCallPlanner: React.FC = () => {
               const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
               
               // Convert database contacts to UI contacts
-              const uiContacts = dbContacts.map((dbContact: any) => ({
+              const uiContacts = dbContacts.map((dbContact: DatabaseContact): Contact => ({
                 id: dbContact.id,
                 companyName: dbContact.company,
                 contactName: dbContact.name,
@@ -116,16 +116,17 @@ const IntegratedCallPlanner: React.FC = () => {
                 position: dbContact.title,
                 phone: dbContact.phone,
                 email: dbContact.email,
-                industry: dbContact.industry,
+                industry: dbContact.industry || '',
                 employeeCount: dbContact.employeeCount,
                 revenue: dbContact.revenue,
                 persona: dbContact.personaType as PersonaType,
-                status: dbContact.status,
-                source: sequence.mode === 'imported' ? 'csv' : sequence.mode === 'crm-sync' ? 'crm' : 'manual'
+                status: dbContact.status as Contact['status'],
+                source: sequence.mode === 'imported' ? 'csv' : sequence.mode === 'crm-sync' ? 'crm' : 'manual',
+                notes: dbContact.notes
               }));
               
               setContacts(uiContacts);
-              setSelectedContacts(new Set(uiContacts.map((c: any) => c.id)));
+              setSelectedContacts(new Set(uiContacts.map((c: Contact) => c.id)));
               setContactsLocked(true);
               setShowGuideSection(true);
               setCurrentSequence(sequence);
@@ -418,14 +419,31 @@ const IntegratedCallPlanner: React.FC = () => {
                 employeeCount: contact.employeeCount,
                 revenue: contact.revenue,
                 personaType: contact.persona,
-                status: 'new',
+                status: 'new' as const,
                 tags: [],
                 notes: contact.notes
               });
               return dbContact;
             }
-            // Contact already exists, just return it
-            return contact;
+            // Contact already exists, convert to DatabaseContact format
+            return {
+              id: contact.id,
+              userId,
+              company: contact.companyName,
+              name: contact.contactName,
+              title: contact.title,
+              phone: contact.phone,
+              email: contact.email,
+              industry: contact.industry,
+              employeeCount: contact.employeeCount,
+              revenue: contact.revenue,
+              personaType: contact.persona,
+              status: contact.status as DatabaseContact['status'],
+              tags: [],
+              notes: contact.notes,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            } as DatabaseContact;
           })
         );
         
@@ -434,14 +452,16 @@ const IntegratedCallPlanner: React.FC = () => {
           userId,
           name: `Planning Session ${new Date().toLocaleDateString()}`,
           contacts: savedContacts.map(c => ({
-            id: c.id || c.id,
-            companyName: c.company || c.companyName,
-            contactName: c.name || c.contactName,
-            status: 'pending'
+            id: c.id,
+            companyName: 'company' in c ? c.company : c.companyName,
+            contactName: 'name' in c ? c.name : c.contactName,
+            status: 'pending' as const,
+            industry: 'industry' in c ? c.industry || '' : c.industry || '',
+            source: 'manual' as const
           })),
-          contactIds: savedContacts.map(c => c.id || c.id),
+          contactIds: savedContacts.map(c => c.id),
           totalContacts: savedContacts.length,
-          status: 'planned',
+          status: 'planned' as const,
           sprintSize: 10, // Default sprint size
           mode: mode === 'imported-list' ? 'imported' : mode === 'crm-sync' ? 'crm-sync' : 'standalone',
           updatedAt: new Date(),
@@ -566,7 +586,8 @@ const IntegratedCallPlanner: React.FC = () => {
       createdAt: new Date(),
       status: 'planned',
       sprintSize,
-      mode: mode === 'single-prospect' ? 'standalone' : mode === 'imported-list' ? 'imported' : 'crm-sync'
+      mode: mode === 'single-prospect' ? 'standalone' : mode === 'imported-list' ? 'imported' : 'crm-sync',
+      contactIds: selectedContactList.slice(0, sprintSize).map(c => c.id)
     };
 
     setCurrentSequence(sequence);
