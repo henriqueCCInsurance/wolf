@@ -18,7 +18,7 @@ const Footer: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">W.O.L.F</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-300">v1.1.0</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">v1.1.1</p>
               </div>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300">
