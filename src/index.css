@@ -7,9 +7,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import Spatial Design System */
-@import './spatial-design.css';
-
 /* Custom animations */
 @keyframes fadeIn {
   from {
