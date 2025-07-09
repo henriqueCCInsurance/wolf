@@ -13,7 +13,11 @@ import {
   Target,
   Brain,
   FileText,
-  Search
+  Search,
+  Lock,
+  Unlock,
+  ArrowRight,
+  CheckCircle
 } from 'lucide-react';
 import { CallSequence, Contact, PersonaType, ContentItem } from '@/types';
 import Card from '@/components/common/Card';
@@ -49,6 +53,9 @@ const IntegratedCallPlanner: React.FC = () => {
   const [showImporter, setShowImporter] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [contactsLocked, setContactsLocked] = useState(false);
+  const [showGuideSection, setShowGuideSection] = useState(false);
+  const [gatheringIntelligence, setGatheringIntelligence] = useState(false);
 
   // Single prospect form data
   const [formData, setFormData] = useState({
@@ -69,6 +76,14 @@ const IntegratedCallPlanner: React.FC = () => {
     setContacts([]);
     setSelectedContacts(new Set());
     setCurrentSequence(null);
+    setContactsLocked(false);
+    setShowGuideSection(false);
+    setGatheringIntelligence(false);
+    
+    // Clear any locked contacts from previous sessions
+    localStorage.removeItem('wolf-den-locked-contacts');
+    localStorage.removeItem('wolf-den-company-intelligence');
+    localStorage.removeItem('wolf-den-intelligence-loading');
     
     // If single prospect mode, prepare for Planner flow
     if (newMode === 'single-prospect') {
@@ -129,7 +144,7 @@ const IntegratedCallPlanner: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitProspect = () => {
+  const handleSubmitProspect = async () => {
     if (validateForm()) {
       const newProspect = {
         companyName: formData.companyName,
@@ -148,6 +163,8 @@ const IntegratedCallPlanner: React.FC = () => {
         id: Date.now().toString(),
         companyName: formData.companyName,
         contactName: formData.contactName,
+        phone: formData.contactPhone,
+        email: formData.contactEmail,
         industry: formData.industry,
         persona: formData.persona,
         source: 'manual',
@@ -156,6 +173,42 @@ const IntegratedCallPlanner: React.FC = () => {
       
       setContacts([contact]);
       setSelectedContacts(new Set([contact.id]));
+      
+      // Auto-lock the prospect in single prospect mode
+      setContactsLocked(true);
+      setGatheringIntelligence(true);
+      
+      // Save locked contact to localStorage
+      localStorage.setItem('wolf-den-locked-contacts', JSON.stringify([contact]));
+      
+      // Trigger intelligence gathering
+      try {
+        const { CompanyIntelligenceService } = await import('@/services/companyIntelligence');
+        
+        const intelligencePromise = CompanyIntelligenceService.getMultipleCompanyIntelligence([newProspect]);
+        
+        localStorage.setItem('wolf-den-intelligence-loading', 'true');
+        
+        intelligencePromise.then(intelligence => {
+          localStorage.setItem('wolf-den-company-intelligence', JSON.stringify(Object.fromEntries(intelligence)));
+          localStorage.removeItem('wolf-den-intelligence-loading');
+          setGatheringIntelligence(false);
+        }).catch(error => {
+          console.error('Error gathering company intelligence:', error);
+          localStorage.removeItem('wolf-den-intelligence-loading');
+          setGatheringIntelligence(false);
+        });
+        
+        // Show guide section after a brief delay
+        setTimeout(() => {
+          setShowGuideSection(true);
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error loading CompanyIntelligenceService:', error);
+        setGatheringIntelligence(false);
+        setShowGuideSection(true);
+      }
     }
   };
 
@@ -214,6 +267,65 @@ const IntegratedCallPlanner: React.FC = () => {
     setShowImporter(false);
   };
 
+  const handleLockContacts = async () => {
+    setContactsLocked(true);
+    setGatheringIntelligence(true);
+    
+    // Save locked contacts to localStorage
+    const contactsToLock = contacts.filter(c => selectedContacts.has(c.id));
+    localStorage.setItem('wolf-den-locked-contacts', JSON.stringify(contactsToLock));
+    
+    // Trigger real-time company intelligence gathering
+    try {
+      const { CompanyIntelligenceService } = await import('@/services/companyIntelligence');
+      
+      // Convert contacts to prospects for intelligence gathering
+      const contactsAsProspects = contactsToLock.map(contact => ({
+        ...contact,
+        persona: contact.persona || 'cost-conscious-employer' as PersonaType
+      }));
+      
+      const intelligencePromise = CompanyIntelligenceService.getMultipleCompanyIntelligence(contactsAsProspects);
+      
+      // Store the promise for later use
+      localStorage.setItem('wolf-den-intelligence-loading', 'true');
+      
+      // Process intelligence in background
+      intelligencePromise.then(intelligence => {
+        localStorage.setItem('wolf-den-company-intelligence', JSON.stringify(Object.fromEntries(intelligence)));
+        localStorage.removeItem('wolf-den-intelligence-loading');
+        setGatheringIntelligence(false);
+      }).catch(error => {
+        console.error('Error gathering company intelligence:', error);
+        localStorage.removeItem('wolf-den-intelligence-loading');
+        setGatheringIntelligence(false);
+      });
+      
+      // After a brief delay, show the guide section
+      setTimeout(() => {
+        setShowGuideSection(true);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error loading CompanyIntelligenceService:', error);
+      setGatheringIntelligence(false);
+      setShowGuideSection(true);
+    }
+  };
+
+  const handleUnlockContacts = () => {
+    setContactsLocked(false);
+    setShowGuideSection(false);
+    localStorage.removeItem('wolf-den-locked-contacts');
+    localStorage.removeItem('wolf-den-company-intelligence');
+    localStorage.removeItem('wolf-den-intelligence-loading');
+  };
+
+  const handleProceedToGuide = () => {
+    // Save current state before navigating
+    setCurrentModule('battle-card');
+  };
+
   const handleContactSelect = (contactId: string) => {
     const newSelected = new Set(selectedContacts);
     if (newSelected.has(contactId)) {
@@ -259,14 +371,18 @@ const IntegratedCallPlanner: React.FC = () => {
   };
 
   const updateContact = (id: string, updates: Partial<Contact>) => {
-    setContacts(contacts.map(c => c.id === id ? { ...c, ...updates } : c));
+    if (!contactsLocked) {
+      setContacts(contacts.map(c => c.id === id ? { ...c, ...updates } : c));
+    }
   };
 
   const removeContact = (id: string) => {
-    setContacts(contacts.filter(c => c.id !== id));
-    const newSelected = new Set(selectedContacts);
-    newSelected.delete(id);
-    setSelectedContacts(newSelected);
+    if (!contactsLocked) {
+      setContacts(contacts.filter(c => c.id !== id));
+      const newSelected = new Set(selectedContacts);
+      newSelected.delete(id);
+      setSelectedContacts(newSelected);
+    }
   };
 
   const exportSequence = () => {
@@ -393,6 +509,7 @@ const IntegratedCallPlanner: React.FC = () => {
               placeholder="e.g., ABC Manufacturing Inc."
               required
               error={errors.companyName}
+              disabled={contactsLocked}
             />
             
             <Input
@@ -402,6 +519,7 @@ const IntegratedCallPlanner: React.FC = () => {
               placeholder="e.g., John Smith"
               required
               error={errors.contactName}
+              disabled={contactsLocked}
             />
 
             <Input
@@ -412,6 +530,7 @@ const IntegratedCallPlanner: React.FC = () => {
               required
               error={errors.contactPhone}
               type="tel"
+              disabled={contactsLocked}
             />
 
             <Input
@@ -420,6 +539,7 @@ const IntegratedCallPlanner: React.FC = () => {
               onChange={(value) => setFormData({ ...formData, contactPosition: value })}
               placeholder="e.g., HR Director, CFO"
               error={errors.contactPosition}
+              disabled={contactsLocked}
             />
 
             <Input
@@ -429,6 +549,7 @@ const IntegratedCallPlanner: React.FC = () => {
               placeholder="e.g., john.smith@company.com"
               error={errors.contactEmail}
               type="email"
+              disabled={contactsLocked}
             />
             
             <Select
@@ -442,6 +563,7 @@ const IntegratedCallPlanner: React.FC = () => {
               placeholder="Select industry..."
               required
               error={errors.industry}
+              disabled={contactsLocked}
             />
             
             <Select
@@ -455,19 +577,90 @@ const IntegratedCallPlanner: React.FC = () => {
               placeholder="Select persona..."
               required
               error={errors.persona}
+              disabled={contactsLocked}
             />
           </div>
           
-          <div className="mt-4">
-            <Button onClick={handleSubmitProspect} className="w-full md:w-auto">
-              <Target className="w-4 h-4 mr-2" />
-              Lock Prospect
-            </Button>
+          <div className="mt-4 flex items-center gap-4">
+            {!contactsLocked ? (
+              <Button onClick={handleSubmitProspect} className="w-full md:w-auto">
+                <Target className="w-4 h-4 mr-2" />
+                Lock Prospect
+              </Button>
+            ) : (
+              <>
+                <div className="flex items-center text-sm text-purple-600 bg-purple-50 px-4 py-2 rounded-lg">
+                  <Lock className="w-4 h-4 mr-2" />
+                  <span className="font-medium">Prospect Locked</span>
+                </div>
+                <Button 
+                  onClick={handleUnlockContacts}
+                  variant="outline"
+                  size="sm"
+                  className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                >
+                  <Unlock className="w-3 h-3 mr-1.5" />
+                  Unlock
+                </Button>
+              </>
+            )}
           </div>
         </CollapsibleSection>
 
+        {/* Guide Section for Single Prospect Mode */}
+        {contactsLocked && showGuideSection && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card 
+              title="Call Preparation Guide" 
+              subtitle="Your prospect is locked. Let's prepare for a successful call."
+              className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200"
+            >
+              <div className="space-y-6">
+                {/* Progress Indicator */}
+                <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                      <CheckCircle className="w-6 h-6 text-green-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">Prospect Locked</span>
+                    </div>
+                    <div className="text-gray-400">→</div>
+                    <div className="flex items-center">
+                      <Brain className="w-6 h-6 text-purple-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {gatheringIntelligence ? 'Gathering Intelligence...' : 'Intelligence Ready'}
+                      </span>
+                    </div>
+                    <div className="text-gray-400">→</div>
+                    <div className="flex items-center">
+                      <Target className="w-6 h-6 text-blue-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">Ready to Call</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <div className="text-center pt-4">
+                  <Button
+                    onClick={handleProceedToGuide}
+                    size="lg"
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                    disabled={gatheringIntelligence}
+                  >
+                    <ArrowRight className="w-5 h-5 mr-2" />
+                    {advancedMode ? 'Continue to Intelligence Gathering' : 'Generate Call Guide'}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Persona Insights - Only in Advanced Mode */}
-        {selectedPersona && advancedMode && (
+        {selectedPersona && advancedMode && !showGuideSection && (
           <CollapsibleSection
             title={`Step 2: Persona Intelligence - ${selectedPersona.title}`}
             subtitle={selectedPersona.description}
@@ -519,7 +712,7 @@ const IntegratedCallPlanner: React.FC = () => {
         )}
 
         {/* Industry Intelligence - Only in Advanced Mode */}
-        {selectedIndustry && advancedMode && (
+        {selectedIndustry && advancedMode && !showGuideSection && (
           <Card 
             title={`Step 3: Industry Intelligence - ${selectedIndustry.name}`}
             subtitle="Current risks and opportunities in this sector"
@@ -553,7 +746,7 @@ const IntegratedCallPlanner: React.FC = () => {
         )}
 
         {/* Live Industry Intelligence - Only in Advanced Mode */}
-        {prospect && advancedMode && (
+        {prospect && advancedMode && !showGuideSection && (
           <Card 
             title="Step 4: Live Industry Intelligence"
             subtitle="2025 market data and thought leadership for your target industry"
@@ -563,7 +756,7 @@ const IntegratedCallPlanner: React.FC = () => {
         )}
 
         {/* Dynamic Intelligence - Only in Advanced Mode */}
-        {prospect && advancedMode && (
+        {prospect && advancedMode && !showGuideSection && (
           <Card 
             title="Step 5: Dynamic Intelligence Briefing"
             subtitle="Real-time web search intelligence (Demo)"
@@ -628,7 +821,7 @@ const IntegratedCallPlanner: React.FC = () => {
         )}
 
         {/* Content Library - Only in Advanced Mode */}
-        {prospect && advancedMode && (
+        {prospect && advancedMode && !showGuideSection && (
           <Card 
             title="Step 6: Strategic Content Selection"
             subtitle="Choose your conversation weapons for this specific engagement"
@@ -638,7 +831,7 @@ const IntegratedCallPlanner: React.FC = () => {
         )}
 
         {/* Quick Summary for Simple Mode */}
-        {prospect && !advancedMode && (
+        {prospect && !advancedMode && !showGuideSection && (
           <Card 
             title="Quick Guide"
             subtitle="Essential information for your call"
@@ -689,7 +882,7 @@ const IntegratedCallPlanner: React.FC = () => {
         )}
 
         {/* Generate Guide */}
-        {prospect && (advancedMode ? selectedContent.length > 0 : true) && (
+        {prospect && (advancedMode ? selectedContent.length > 0 : true) && !showGuideSection && (
           <div className="text-center">
             <Button 
               onClick={handleGenerateCallGuide}
@@ -738,32 +931,66 @@ const IntegratedCallPlanner: React.FC = () => {
         subtitle={`Managing contacts for ${mode === 'imported-list' ? 'imported list' : 'CRM sync'}`}
       >
         {/* Action Buttons */}
-        <div className="flex gap-3 mb-6">
-          {mode === 'imported-list' && (
+        <div className="flex gap-3 mb-6 flex-wrap">
+          {mode === 'imported-list' && !contactsLocked && (
             <Button onClick={() => setShowImporter(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Import CSV
             </Button>
           )}
           
-          {mode === 'crm-sync' && (
+          {mode === 'crm-sync' && !contactsLocked && (
             <Button>
               <Database className="w-4 h-4 mr-2" />
               Sync from Zoho CRM
             </Button>
           )}
           
-          <Button variant="outline" onClick={addStandaloneContact}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Manual Contact
-          </Button>
+          {!contactsLocked && (
+            <Button variant="outline" onClick={addStandaloneContact}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Manual Contact
+            </Button>
+          )}
+          
+          {contacts.length > 0 && (
+            <>
+              {!contactsLocked ? (
+                <Button 
+                  onClick={handleLockContacts}
+                  className="bg-purple-600 hover:bg-purple-700"
+                  disabled={gatheringIntelligence || selectedContacts.size === 0}
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  {gatheringIntelligence ? 'Gathering Intelligence...' : `Lock ${selectedContacts.size} Selected`}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleUnlockContacts}
+                  variant="outline"
+                  className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                >
+                  <Unlock className="w-4 h-4 mr-2" />
+                  Unlock Leads
+                </Button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Contacts List */}
         {contacts.length > 0 ? (
           <div className="space-y-3">
-            <div className="text-sm text-gray-600">
-              {contacts.length} contact{contacts.length !== 1 ? 's' : ''} • {selectedContacts.size} selected
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                {contacts.length} contact{contacts.length !== 1 ? 's' : ''} • {selectedContacts.size} selected
+              </div>
+              {contactsLocked && (
+                <div className="flex items-center text-sm text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+                  <Lock className="w-3 h-3 mr-1.5" />
+                  Leads Locked
+                </div>
+              )}
             </div>
             
             <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -780,7 +1007,8 @@ const IntegratedCallPlanner: React.FC = () => {
                     type="checkbox"
                     checked={selectedContacts.has(contact.id)}
                     onChange={() => handleContactSelect(contact.id)}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    disabled={contactsLocked}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
                   />
                   
                   <div className="flex-1 grid grid-cols-3 gap-3">
@@ -789,27 +1017,31 @@ const IntegratedCallPlanner: React.FC = () => {
                       placeholder="Company name"
                       value={contact.companyName}
                       onChange={(e) => updateContact(contact.id, { companyName: e.target.value })}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm"
+                      disabled={contactsLocked}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
                     />
                     <input
                       type="text"
                       placeholder="Contact name"
                       value={contact.contactName}
                       onChange={(e) => updateContact(contact.id, { contactName: e.target.value })}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm"
+                      disabled={contactsLocked}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
                     />
                     <input
                       type="text"
                       placeholder="Industry"
                       value={contact.industry}
                       onChange={(e) => updateContact(contact.id, { industry: e.target.value })}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm"
+                      disabled={contactsLocked}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
                     />
                   </div>
                   
                   <button
                     onClick={() => removeContact(contact.id)}
-                    className="text-red-500 hover:text-red-700"
+                    disabled={contactsLocked}
+                    className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -829,8 +1061,129 @@ const IntegratedCallPlanner: React.FC = () => {
         )}
       </Card>
 
+      {/* Guide Section - Shows after locking contacts */}
+      {contactsLocked && showGuideSection && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card 
+            title="Call Preparation Guide" 
+            subtitle="Your leads are locked. Let's prepare for successful calls."
+            className="bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200"
+          >
+            <div className="space-y-6">
+              {/* Progress Indicator */}
+              <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-6 h-6 text-green-500 mr-2" />
+                    <span className="text-sm font-medium text-gray-900">
+                      {selectedContacts.size} Lead{selectedContacts.size !== 1 ? 's' : ''} Locked
+                    </span>
+                  </div>
+                  <div className="text-gray-400">→</div>
+                  <div className="flex items-center">
+                    <Brain className="w-6 h-6 text-purple-500 mr-2" />
+                    <span className="text-sm font-medium text-gray-900">
+                      {gatheringIntelligence ? 'Gathering Intelligence...' : 'Intelligence Ready'}
+                    </span>
+                  </div>
+                  <div className="text-gray-400">→</div>
+                  <div className="flex items-center">
+                    <Target className="w-6 h-6 text-blue-500 mr-2" />
+                    <span className="text-sm font-medium text-gray-900">Ready to Call</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Guide Content */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-lg shadow-sm">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                    What We're Preparing
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      Persona-specific conversation starters
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      Industry insights and talking points
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      Objection handling strategies
+                    </li>
+                    <li className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      Real-time company intelligence
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-white p-6 rounded-lg shadow-sm">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Brain className="w-5 h-5 mr-2 text-purple-600" />
+                    Intelligence Status
+                  </h3>
+                  {gatheringIntelligence ? (
+                    <div className="space-y-3">
+                      <div className="animate-pulse">
+                        <div className="h-2 bg-purple-200 rounded mb-2"></div>
+                        <div className="h-2 bg-purple-200 rounded mb-2 w-4/5"></div>
+                        <div className="h-2 bg-purple-200 rounded w-3/5"></div>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Gathering real-time intelligence for your locked leads...
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center text-green-600">
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        <span className="font-medium">Intelligence gathered successfully</span>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Company insights, industry trends, and conversation hooks are ready for your calls.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center space-x-4 pt-4">
+                <Button
+                  onClick={handleProceedToGuide}
+                  size="lg"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  disabled={gatheringIntelligence}
+                >
+                  <ArrowRight className="w-5 h-5 mr-2" />
+                  View Call Guides
+                </Button>
+                
+                {(
+                  <Button
+                    onClick={() => setShowGuideSection(false)}
+                    variant="outline"
+                    size="lg"
+                  >
+                    Continue to Sprint Planning
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Sprint Planning */}
-      {contacts.length > 0 && selectedContacts.size > 0 && (
+      {contacts.length > 0 && selectedContacts.size > 0 && !showGuideSection && (
         <Card title="Sprint Planning" subtitle="Create focused call sequences">
           <div className="space-y-4">
             <div className="text-sm text-gray-600">
