@@ -313,6 +313,15 @@ const IntegratedCallPlanner: React.FC = () => {
     }
   };
 
+  const handleLockAllContacts = async () => {
+    // Select all contacts first
+    const allContactIds = new Set(contacts.map(c => c.id));
+    setSelectedContacts(allContactIds);
+    
+    // Use existing lock logic
+    await handleLockContacts();
+  };
+
   const handleUnlockContacts = () => {
     setContactsLocked(false);
     setShowGuideSection(false);
@@ -931,39 +940,58 @@ const IntegratedCallPlanner: React.FC = () => {
         subtitle={`Managing contacts for ${mode === 'imported-list' ? 'imported list' : 'CRM sync'}`}
       >
         {/* Action Buttons */}
-        <div className="flex gap-3 mb-6 flex-wrap">
-          {mode === 'imported-list' && !contactsLocked && (
-            <Button onClick={() => setShowImporter(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Import CSV
-            </Button>
-          )}
+        <div className="space-y-4 mb-6">
+          {/* Import/Add Buttons */}
+          <div className="flex gap-3 flex-wrap">
+            {mode === 'imported-list' && !contactsLocked && (
+              <Button onClick={() => setShowImporter(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Import CSV
+              </Button>
+            )}
+            
+            {mode === 'crm-sync' && !contactsLocked && (
+              <Button>
+                <Database className="w-4 h-4 mr-2" />
+                Sync from Zoho CRM
+              </Button>
+            )}
+            
+            {!contactsLocked && (
+              <Button variant="outline" onClick={addStandaloneContact}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Manual Contact
+              </Button>
+            )}
+          </div>
           
-          {mode === 'crm-sync' && !contactsLocked && (
-            <Button>
-              <Database className="w-4 h-4 mr-2" />
-              Sync from Zoho CRM
-            </Button>
-          )}
-          
-          {!contactsLocked && (
-            <Button variant="outline" onClick={addStandaloneContact}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Manual Contact
-            </Button>
-          )}
-          
+          {/* Lock Buttons */}
           {contacts.length > 0 && (
-            <>
+            <div className="flex gap-3 flex-wrap">
               {!contactsLocked ? (
-                <Button 
-                  onClick={handleLockContacts}
-                  className="bg-purple-600 hover:bg-purple-700"
-                  disabled={gatheringIntelligence || selectedContacts.size === 0}
-                >
-                  <Lock className="w-4 h-4 mr-2" />
-                  {gatheringIntelligence ? 'Gathering Intelligence...' : `Lock ${selectedContacts.size} Selected`}
-                </Button>
+                <>
+                  {/* Lock All Leads button for mass import modes */}
+                  {(mode === 'imported-list' || mode === 'crm-sync') && (
+                    <Button 
+                      onClick={handleLockAllContacts}
+                      className="bg-purple-600 hover:bg-purple-700 shadow-md"
+                      disabled={gatheringIntelligence}
+                    >
+                      <Lock className="w-4 h-4 mr-2" />
+                      {gatheringIntelligence ? 'Gathering Intelligence...' : `Lock All ${contacts.length} Leads`}
+                    </Button>
+                  )}
+                  
+                  {/* Lock Selected button */}
+                  <Button 
+                    onClick={handleLockContacts}
+                    className="bg-purple-600 hover:bg-purple-700 shadow-md"
+                    disabled={gatheringIntelligence || selectedContacts.size === 0}
+                  >
+                    <Lock className="w-4 h-4 mr-2" />
+                    {gatheringIntelligence ? 'Gathering Intelligence...' : `Lock ${selectedContacts.size} Selected`}
+                  </Button>
+                </>
               ) : (
                 <Button 
                   onClick={handleUnlockContacts}
@@ -974,7 +1002,7 @@ const IntegratedCallPlanner: React.FC = () => {
                   Unlock Leads
                 </Button>
               )}
-            </>
+            </div>
           )}
         </div>
 
@@ -1156,15 +1184,15 @@ const IntegratedCallPlanner: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-center space-x-4 pt-4">
+              <div className="flex justify-center space-x-4 pt-6">
                 <Button
                   onClick={handleProceedToGuide}
                   size="lg"
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg"
                   disabled={gatheringIntelligence}
                 >
                   <ArrowRight className="w-5 h-5 mr-2" />
-                  View Call Guides
+                  {contacts.length === 1 ? 'Generate Call Guide' : 'View Call Guides'}
                 </Button>
                 
                 {(
