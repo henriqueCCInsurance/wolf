@@ -110,7 +110,10 @@ export class SuccessPredictionService {
         'roi-focused-executive': 75,
         'benefits-optimizer': 70,
         'cost-conscious-employer': 60,
-        'gatekeeper': 45
+        'gatekeeper': 45,
+        'strategic-ceo': 80,
+        'operations-leader': 72,
+        'culture-champion': 65
       };
       return defaultRates[persona];
     }

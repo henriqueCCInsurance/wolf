@@ -90,6 +90,24 @@ const CallGuideHelper: React.FC<CallGuideHelperProps> = ({ persona }) => {
       "⚡ Get to the point quickly",
       "📝 Provide clear value proposition",
       "🤝 Ask for their help/partnership"
+    ],
+    'strategic-ceo': [
+      "🎯 Focus on strategic vision and growth",
+      "📊 Present high-level business impact",
+      "⚡ Be extremely concise and direct",
+      "🚀 Connect to competitive differentiation"
+    ],
+    'operations-leader': [
+      "⚙️ Emphasize operational efficiency",
+      "📋 Discuss implementation processes",
+      "🔧 Highlight administrative simplification",
+      "📈 Show measurable operational improvements"
+    ],
+    'culture-champion': [
+      "🌟 Focus on employee experience",
+      "❤️ Highlight well-being and engagement",
+      "🤝 Emphasize company culture alignment",
+      "🎉 Share success stories and testimonials"
     ]
   };
 
@@ -113,6 +131,21 @@ const CallGuideHelper: React.FC<CallGuideHelperProps> = ({ persona }) => {
       "Being pushy or demanding",
       "Not acknowledging their role",
       "Trying to go around them"
+    ],
+    'strategic-ceo': [
+      "Getting lost in tactical details",
+      "Taking too much of their time",
+      "Focusing on features over strategic outcomes"
+    ],
+    'operations-leader': [
+      "Overcomplicating the implementation",
+      "Ignoring current operational constraints",
+      "Not addressing change management"
+    ],
+    'culture-champion': [
+      "Focusing only on numbers and costs",
+      "Ignoring employee feedback and sentiment",
+      "Not connecting to company values"
     ]
   };
 
@@ -185,7 +218,7 @@ const CallGuideHelper: React.FC<CallGuideHelperProps> = ({ persona }) => {
           <div>
             <h4 className="font-medium text-green-900 mb-2">✅ Do This:</h4>
             <ul className="space-y-1">
-              {personaSpecificTips[persona].map((tip, index) => (
+              {personaSpecificTips[persona].map((tip: string, index: number) => (
                 <li key={index} className="text-sm text-gray-700 flex items-start">
                   <span className="mr-2">{tip.split(' ')[0]}</span>
                   <span>{tip.split(' ').slice(1).join(' ')}</span>
@@ -197,7 +230,7 @@ const CallGuideHelper: React.FC<CallGuideHelperProps> = ({ persona }) => {
           <div>
             <h4 className="font-medium text-red-900 mb-2">❌ Avoid This:</h4>
             <ul className="space-y-1">
-              {redFlags[persona].map((flag, index) => (
+              {redFlags[persona].map((flag: string, index: number) => (
                 <li key={index} className="text-sm text-red-700 flex items-start">
                   <span className="w-2 h-2 bg-red-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
                   {flag}

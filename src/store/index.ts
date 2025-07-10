@@ -50,9 +50,11 @@ interface AppState {
   competitiveEncounters: CompetitiveEncounter[];
   addCompetitiveEncounter: (encounter: CompetitiveEncounter) => void;
   
-  // Battle cards history
+  // Battle cards history (keeping both names for compatibility)
   callCards: CallCard[];
   addCallCard: (card: CallCard) => void;
+  battleCards: CallCard[]; // Alias for backward compatibility
+  addBattleCard: (card: CallCard) => void; // Alias for backward compatibility
   
   // Call sequences
   callSequences: CallSequence[];
@@ -239,6 +241,12 @@ export const useAppStore = create<AppState>()(
       
       // Battle card actions
       addCallCard: (card) => {
+        const { callCards } = get();
+        set({ callCards: [...callCards, card] });
+      },
+      // Backward compatibility aliases
+      get battleCards() { return get().callCards; },
+      addBattleCard: (card) => {
         const { callCards } = get();
         set({ callCards: [...callCards, card] });
       },

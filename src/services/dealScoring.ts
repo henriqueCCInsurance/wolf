@@ -33,7 +33,10 @@ export class DealScoringService {
     'roi-focused-executive': 20,
     'benefits-optimizer': 16,
     'cost-conscious-employer': 12,
-    'gatekeeper': 8
+    'gatekeeper': 8,
+    'strategic-ceo': 22,
+    'operations-leader': 18,
+    'culture-champion': 14
   };
 
   // Employee count ranges (larger companies typically have more complex benefits needs)

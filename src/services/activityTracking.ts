@@ -97,7 +97,7 @@ export const trackCallCardCreated = (user: User, data: {
   contactName: string;
   industry: string;
 }) => {
-  useActivityStore.getState().addActivity('call-card-created', user, data);
+  useActivityStore.getState().addActivity('battle-card-created', user, data);
 };
 
 export const trackSuccessCelebration = (user: User, data: {

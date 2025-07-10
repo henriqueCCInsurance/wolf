@@ -59,6 +59,7 @@ export interface CallLog {
   sequenceId?: string;
   contactId?: string;
   battleCardId?: string;
+  callCardId?: string; // Alias for backward compatibility
   startTime?: Date;
   endTime?: Date;
   attemptNumber?: number;
@@ -87,6 +88,9 @@ export interface CallCard {
   dynamicIntelligence: string[];
   generatedAt: Date;
 }
+
+// Backward compatibility alias
+export type BattleCard = CallCard;
 
 export interface WebSearchResult {
   title: string;

@@ -67,7 +67,10 @@ const DEFAULT_DEAL_SIZES: Record<PersonaType, number> = {
   'roi-focused-executive': 75000,
   'benefits-optimizer': 50000,
   'cost-conscious-employer': 30000,
-  'gatekeeper': 25000
+  'gatekeeper': 25000,
+  'strategic-ceo': 100000,
+  'operations-leader': 60000,
+  'culture-champion': 40000
 };
 
 // Revenue calculation utilities
