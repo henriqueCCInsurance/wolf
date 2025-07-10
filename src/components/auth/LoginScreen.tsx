@@ -97,20 +97,24 @@ const LoginScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 flex transition-colors duration-200">
-      {/* Left Panel - Abstract Gradient Background */}
+      {/* Left Panel - Professional Photography Background */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Professional Abstract Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1a2332] to-[#2c3e50]">
-          {/* Decorative gradient overlays for depth */}
-          <div className="absolute inset-0 opacity-50">
-            <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-primary-500/30 to-transparent rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-primary-600/20 to-transparent rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2"></div>
-            <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-gradient-radial from-white/5 to-transparent rounded-full blur-2xl transform -translate-x-1/2 -translate-y-1/2"></div>
-          </div>
+        {/* High-quality business photograph background */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=2070&auto=format&fit=crop')`,
+          }}
+        >
+          {/* Dark overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/70 to-black/80"></div>
           
-          {/* Subtle pattern overlay */}
-          <div className="absolute inset-0 opacity-10" style={{
-            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.05) 35px, rgba(255,255,255,.05) 70px)`
+          {/* Additional gradient overlay for brand consistency */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-900/20 to-transparent"></div>
+          
+          {/* Subtle vignette effect */}
+          <div className="absolute inset-0" style={{
+            background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)'
           }}></div>
         </div>
         
@@ -127,8 +131,8 @@ const LoginScreen: React.FC = () => {
               <div className="text-center">
                 {/* Wolf Logo */}
                 <div className="mb-8">
-                  <div className="w-32 h-32 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
-                    <img src="/wolf-logo-firefox-style.svg" alt="W.O.L.F Logo" className="w-full h-full drop-shadow-lg" />
+                  <div className="w-36 h-36 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
+                    <img src="/wolf-logo-firefox.svg" alt="W.O.L.F Logo" className="w-full h-full drop-shadow-2xl" />
                   </div>
                 </div>
                 

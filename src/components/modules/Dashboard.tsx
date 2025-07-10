@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { Phone, Target, Trophy, Calendar, Clock, Users, Zap, PieChart, DollarSign, AlertTriangle, Activity } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Phone, Target, Trophy, Calendar, Clock, Users, Zap, PieChart, DollarSign, AlertTriangle, Activity, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Toggle from '@/components/common/Toggle';
 import { useAppStore } from '@/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { TeamActivityFeed } from '@/components/analytics/TeamActivityFeed';
 import { BentoGrid, BentoCard, BentoMetric, BentoChart, BentoHero } from '@/components/common/BentoGrid';
 import { 
@@ -18,6 +18,16 @@ const Dashboard: React.FC = () => {
   const { callLogs, battleCards, setCurrentModule, salesWizardMode, setSalesWizardMode } = useAppStore();
   const { user } = useAuth();
   const [showDetailedMetrics, setShowDetailedMetrics] = useState(false);
+  const [showActivityFeed, setShowActivityFeed] = useState(() => {
+    // Load preference from localStorage
+    const saved = localStorage.getItem('showActivityFeed');
+    return saved !== null ? JSON.parse(saved) : false; // Default to hidden
+  });
+  
+  // Save preference when it changes
+  useEffect(() => {
+    localStorage.setItem('showActivityFeed', JSON.stringify(showActivityFeed));
+  }, [showActivityFeed]);
   
   // Calculate comprehensive metrics
   const revenueMetrics = useMemo(() => calculateRevenueMetrics(callLogs, battleCards, []), [callLogs, battleCards]);
@@ -293,9 +303,9 @@ const Dashboard: React.FC = () => {
   const stats = showDetailedMetrics ? executiveStats : basicStats;
   
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-6 relative">
       {/* Main content area */}
-      <div className="flex-1">
+      <div className={`${showActivityFeed ? 'flex-1' : 'w-full'} transition-all duration-300`}>
         <BentoGrid variant="default" className="mb-6">
           {/* Welcome Hero */}
           <BentoHero
@@ -557,16 +567,59 @@ const Dashboard: React.FC = () => {
         
       </div>
       
-      {/* Activity Feed Sidebar */}
-      <div className="hidden xl:block w-96">
-        <div className="sticky top-6">
-          <TeamActivityFeed 
-            className="h-[calc(100vh-8rem)] overflow-hidden" 
-            compact={true}
-            limit={15}
-          />
-        </div>
-      </div>
+      {/* Toggle Button for Activity Feed */}
+      <motion.button
+        onClick={() => setShowActivityFeed(!showActivityFeed)}
+        className={`fixed right-0 top-1/2 -translate-y-1/2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-l-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 ${
+          showActivityFeed ? 'translate-x-0' : 'translate-x-0'
+        }`}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        {showActivityFeed ? (
+          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        ) : (
+          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        )}
+      </motion.button>
+      
+      {/* Activity Feed Sidebar - Now Toggleable */}
+      <AnimatePresence>
+        {showActivityFeed && (
+          <motion.div 
+            className="w-80"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <div className="sticky top-6 h-[calc(100vh-8rem)]">
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden h-full">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-primary-600" />
+                    Team Activity
+                  </h3>
+                  <button
+                    onClick={() => setShowActivityFeed(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <TeamActivityFeed 
+                  className="h-[calc(100%-65px)]" 
+                  compact={true}
+                  limit={20}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
