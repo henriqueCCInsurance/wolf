@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { users, callLogs, battleCards, callSequences, contacts, userPreferences, companyIntelligence, type CallLog, type BattleCard, type CallSequence, type Contact as DatabaseContact, type NewContact, type UserPreferences, type CompanyIntelligence } from '@/db/schema';
+import { users, callLogs, callCards, callSequences, contacts, userPreferences, companyIntelligence, type CallLog, type CallCard, type CallSequence, type Contact as DatabaseContact, type NewContact, type UserPreferences, type CompanyIntelligence } from '@/db/schema';
 import { eq, desc, and, inArray, or, ilike } from 'drizzle-orm';
 
 // User operations
@@ -47,31 +47,34 @@ export const callLogService = {
   }
 };
 
-// Battle card operations
-export const battleCardService = {
-  async create(data: Omit<BattleCard, 'id' | 'createdAt'>) {
-    const [card] = await db.insert(battleCards).values(data).returning();
+// Call card operations  
+export const callCardService = {
+  async create(data: Omit<CallCard, 'id' | 'createdAt'>) {
+    const [card] = await db.insert(callCards).values(data).returning();
     return card;
   },
 
   async getByUser(userId: string, limit = 20) {
     return db.select()
-      .from(battleCards)
-      .where(eq(battleCards.userId, userId))
-      .orderBy(desc(battleCards.createdAt))
+      .from(callCards)
+      .where(eq(callCards.userId, userId))
+      .orderBy(desc(callCards.createdAt))
       .limit(limit);
   },
 
   async getById(id: string, userId: string) {
     const [card] = await db.select()
-      .from(battleCards)
+      .from(callCards)
       .where(and(
-        eq(battleCards.id, id),
-        eq(battleCards.userId, userId)
+        eq(callCards.id, id),
+        eq(callCards.userId, userId)
       ));
     return card;
   }
 };
+
+// Battle card service alias for backward compatibility
+export const battleCardService = callCardService;
 
 // Call sequence operations
 export const callSequenceService = {

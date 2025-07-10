@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '@/store';
+import { PersonaType } from '@/types';
 
 interface CallTimerProps {
-  persona: 'cost-conscious-employer' | 'benefits-optimizer' | 'roi-focused-executive' | 'gatekeeper';
+  persona: PersonaType;
   onTimeUpdate?: (seconds: number) => void;
   onCallEnd?: (duration: number) => void;
   isCallActive?: boolean;
@@ -21,7 +22,10 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd,
     'cost-conscious-employer': { min: 300, optimal: 480, max: 720 }, // 5-8-12 min
     'benefits-optimizer': { min: 600, optimal: 900, max: 1200 }, // 10-15-20 min
     'roi-focused-executive': { min: 480, optimal: 720, max: 900 }, // 8-12-15 min
-    'gatekeeper': { min: 120, optimal: 240, max: 360 } // 2-4-6 min
+    'gatekeeper': { min: 120, optimal: 240, max: 360 }, // 2-4-6 min
+    'strategic-ceo': { min: 240, optimal: 420, max: 600 }, // 4-7-10 min (shorter for executives)
+    'operations-leader': { min: 480, optimal: 780, max: 1080 }, // 8-13-18 min (detailed operational discussions)
+    'culture-champion': { min: 540, optimal: 840, max: 1200 } // 9-14-20 min (relationship-focused)
   };
 
   const target = targetDurations[persona];
@@ -122,6 +126,12 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd,
         return 'Present data-driven insights and financial impact quickly.';
       case 'gatekeeper':
         return 'Be respectful and brief. Get to the point quickly.';
+      case 'strategic-ceo':
+        return 'Be extremely concise. Focus on strategic vision and competitive advantage.';
+      case 'operations-leader':
+        return 'Discuss implementation processes and operational efficiency in detail.';
+      case 'culture-champion':
+        return 'Focus on employee experience and company culture alignment.';
       default:
         return 'Adapt your approach based on the conversation flow.';
     }
