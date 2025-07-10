@@ -1,0 +1,37 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Wolf silhouette -->
+  <g transform="translate(100, 100)">
+    <!-- Main body -->
+    <path d="M-40 20 Q-45 10 -45 0 Q-45 -15 -35 -25 L-25 -30 Q-15 -35 0 -35 Q15 -35 25 -30 L35 -25 Q45 -15 45 0 Q45 10 40 20 L30 35 Q20 45 0 45 Q-20 45 -30 35 Z" 
+          fill="url(#wolfGradient)" />
+    
+    <!-- Ears -->
+    <path d="M-25 -30 L-30 -45 Q-28 -50 -22 -48 L-20 -35 Z" fill="url(#wolfGradient)" />
+    <path d="M25 -30 L30 -45 Q28 -50 22 -48 L20 -35 Z" fill="url(#wolfGradient)" />
+    
+    <!-- Snout -->
+    <path d="M0 0 Q-8 5 -10 15 Q-8 20 0 22 Q8 20 10 15 Q8 5 0 0 Z" fill="url(#wolfGradientDark)" />
+    
+    <!-- Eyes -->
+    <circle cx="-12" cy="-5" r="3" fill="#ffffff" opacity="0.9" />
+    <circle cx="12" cy="-5" r="3" fill="#ffffff" opacity="0.9" />
+    
+    <!-- Lightning bolt accent -->
+    <path d="M0 -20 L-5 -10 L2 -10 L-2 5 L8 -15 L0 -15 Z" 
+          fill="#ffffff" 
+          opacity="0.8" />
+  </g>
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="wolfGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a5cf4c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7aa030;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="wolfGradientDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7aa030;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5a7621;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

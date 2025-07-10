@@ -1,7 +1,5 @@
 /* Import Variable Fonts for 2025 Modern Typography */
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Cal+Sans:wght@400;600;700&display=swap');
+/* Font imports moved to index.html for better performance */
 
 /* Import Spatial Design System */
 @import './styles/spatial-design.css';
@@ -204,9 +202,8 @@
     
     /* Typography System with Variable Fonts */
     --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    --font-display: 'Cal Sans', 'Inter Variable', 'Inter', system-ui, sans-serif;
+    --font-display: 'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
-    --font-lato: 'Lato', sans-serif;
     
     /* Font Feature Settings for Variable Fonts */
     --font-feature-sans: "ss01", "ss02", "ss03", "ss04";
@@ -237,6 +234,7 @@
     font-family: var(--font-sans);
     font-feature-settings: var(--font-feature-sans);
     font-optical-sizing: auto;
+    font-variation-settings: 'wght' 400;
     @apply bg-neutral-25 text-neutral-900 transition-all duration-300 antialiased;
     background-image: 
       radial-gradient(circle at 20% 50%, rgba(165, 207, 76, 0.04) 0%, transparent 50%),
@@ -248,6 +246,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-synthesis: none;
   }
   
   .dark body {
@@ -263,62 +262,84 @@
     font-family: var(--font-display);
     font-feature-settings: var(--font-feature-display);
     font-optical-sizing: auto;
-    @apply font-semibold tracking-tight;
+    @apply tracking-tight;
     line-height: 1.2;
     text-wrap: balance;
   }
   
   /* Display Typography (Bold 2025 trend) */
   .text-display-xl {
-    @apply text-5xl md:text-6xl lg:text-7xl font-bold;
-    letter-spacing: var(--letter-spacing-tighter);
+    @apply text-5xl md:text-6xl lg:text-7xl;
+    font-weight: 600;
+    font-variation-settings: 'wght' 600;
+    letter-spacing: var(--letter-spacing-normal);
     line-height: 1.1;
   }
   
   .text-display-lg {
-    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
-    letter-spacing: var(--letter-spacing-tighter);
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    font-weight: 600;
+    font-variation-settings: 'wght' 600;
+    letter-spacing: var(--letter-spacing-normal);
     line-height: 1.1;
   }
   
   .text-display-md {
-    @apply text-3xl md:text-4xl lg:text-5xl font-semibold;
-    letter-spacing: var(--letter-spacing-tight);
+    @apply text-3xl md:text-4xl lg:text-5xl;
+    font-weight: 500;
+    font-variation-settings: 'wght' 500;
+    letter-spacing: var(--letter-spacing-normal);
     line-height: 1.15;
   }
   
   .text-display-sm {
-    @apply text-2xl md:text-3xl lg:text-4xl font-semibold;
-    letter-spacing: var(--letter-spacing-tight);
+    @apply text-2xl md:text-3xl lg:text-4xl;
+    font-weight: 500;
+    font-variation-settings: 'wght' 500;
+    letter-spacing: var(--letter-spacing-normal);
     line-height: 1.2;
   }
   
   /* Standard Headings */
   h1 {
-    @apply text-display-md;
+    @apply text-3xl md:text-4xl lg:text-5xl font-semibold;
+    font-variation-settings: 'wght' 600;
+    letter-spacing: var(--letter-spacing-normal);
+    line-height: 1.15;
   }
   
   h2 {
-    @apply text-display-sm;
+    @apply text-2xl md:text-3xl lg:text-4xl font-semibold;
+    font-variation-settings: 'wght' 600;
+    letter-spacing: var(--letter-spacing-normal);
+    line-height: 1.2;
   }
   
   h3 {
-    @apply text-2xl md:text-3xl font-semibold;
-    letter-spacing: var(--letter-spacing-tight);
+    @apply text-2xl md:text-3xl;
+    font-weight: 500;
+    font-variation-settings: 'wght' 500;
+    letter-spacing: var(--letter-spacing-normal);
   }
   
   h4 {
-    @apply text-xl md:text-2xl font-semibold;
-    letter-spacing: var(--letter-spacing-tight);
+    @apply text-xl md:text-2xl;
+    font-weight: 500;
+    font-variation-settings: 'wght' 500;
+    letter-spacing: var(--letter-spacing-normal);
   }
   
   h5 {
-    @apply text-lg md:text-xl font-semibold;
+    @apply text-lg md:text-xl;
+    font-weight: 500;
+    font-variation-settings: 'wght' 500;
     letter-spacing: var(--letter-spacing-normal);
   }
   
   h6 {
-    @apply text-base md:text-lg font-medium;
+    @apply text-base md:text-lg;
+    font-weight: 500;
+    font-variation-settings: 'wght' 500;
     letter-spacing: var(--letter-spacing-normal);
   }
   

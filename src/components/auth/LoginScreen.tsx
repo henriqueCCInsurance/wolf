@@ -123,44 +123,65 @@ const LoginScreen: React.FC = () => {
             className="text-center"
           >
             {/* Logo */}
-            <div className="mb-8">
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 inline-block">
-                <div className="text-4xl font-bold text-white mb-2">
+            <div className="mb-12">
+              <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 inline-block shadow-2xl border border-white/20">
+                <div className="flex items-center justify-center mb-6">
+                  <div className="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center shadow-2xl backdrop-blur-sm border border-white/30 transform hover:scale-105 transition-transform duration-300">
+                    <img src="/wolf-logo.svg" alt="W.O.L.F Logo" className="w-16 h-16" />
+                  </div>
+                </div>
+                <div className="text-6xl font-bold text-white mb-3 tracking-normal" style={{ fontVariationSettings: "'wght' 700" }}>
                   W.O.L.F
                 </div>
-                <div className="text-white/90 text-sm font-medium">
+                <div className="text-white/80 text-base font-medium tracking-wider uppercase">
                   Campbell & Co. Sales Enablement
                 </div>
               </div>
             </div>
 
             {/* Enhanced Tagline */}
-            <h1 className="text-4xl font-bold mb-4 leading-tight">
+            <h1 className="text-5xl mb-6 leading-tight font-bold" style={{ fontVariationSettings: "'wght' 700" }}>
               Sales Intelligence for 
-              <span className="text-primary-200"> Strategic Confidence</span>
+              <span className="block text-primary-300 text-6xl mt-2" style={{ fontVariationSettings: "'wght' 800" }}>Strategic Confidence</span>
             </h1>
-            <p className="text-xl text-white/90 mb-8 max-w-lg leading-relaxed">
+            <p className="text-xl text-white/80 mb-12 max-w-xl mx-auto leading-relaxed font-normal">
               Transform cold call preparation from anxiety into competitive advantage with persona-driven intelligence and battle card generation
             </p>
 
             {/* Features */}
-            <div className="grid grid-cols-2 gap-4 max-w-md">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <Target className="w-6 h-6 text-primary-200 mb-2 mx-auto" />
-                <div className="text-sm font-medium">Smart Targeting</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <TrendingUp className="w-6 h-6 text-primary-200 mb-2 mx-auto" />
-                <div className="text-sm font-medium">Performance Insights</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <Users className="w-6 h-6 text-primary-200 mb-2 mx-auto" />
-                <div className="text-sm font-medium">Team Collaboration</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                <Shield className="w-6 h-6 text-primary-200 mb-2 mx-auto" />
-                <div className="text-sm font-medium">Secure Platform</div>
-              </div>
+            <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto">
+              <motion.div 
+                whileHover={{ scale: 1.05, y: -5 }}
+                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+              >
+                <Target className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
+                <div className="text-base font-semibold">Smart Targeting</div>
+                <div className="text-xs text-white/60 mt-1">AI-powered insights</div>
+              </motion.div>
+              <motion.div 
+                whileHover={{ scale: 1.05, y: -5 }}
+                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+              >
+                <TrendingUp className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
+                <div className="text-base font-semibold">Performance Insights</div>
+                <div className="text-xs text-white/60 mt-1">Real-time analytics</div>
+              </motion.div>
+              <motion.div 
+                whileHover={{ scale: 1.05, y: -5 }}
+                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+              >
+                <Users className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
+                <div className="text-base font-semibold">Team Collaboration</div>
+                <div className="text-xs text-white/60 mt-1">Share & learn together</div>
+              </motion.div>
+              <motion.div 
+                whileHover={{ scale: 1.05, y: -5 }}
+                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+              >
+                <Shield className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
+                <div className="text-base font-semibold">Secure Platform</div>
+                <div className="text-xs text-white/60 mt-1">Enterprise-grade security</div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
@@ -176,17 +197,18 @@ const LoginScreen: React.FC = () => {
         >
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
-            <div className="bg-primary-600 text-white rounded-lg p-4 inline-block mb-4">
-              <div className="text-2xl font-bold">W.O.L.F</div>
+            <div className="bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-3xl p-6 inline-block mb-4 shadow-xl">
+              <img src="/wolf-logo.svg" alt="W.O.L.F Logo" className="w-12 h-12 mx-auto mb-2" />
+              <div className="text-2xl font-bold tracking-normal" style={{ fontVariationSettings: "'wght' 700" }}>W.O.L.F</div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome Back</h1>
+            <h1 className="text-3xl text-gray-900 dark:text-gray-100 font-bold mb-2">Welcome Back</h1>
             <p className="text-gray-600 dark:text-gray-300">Sign in to your account</p>
           </div>
 
           {/* Desktop Header */}
-          <div className="hidden lg:block mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Welcome Back</h1>
-            <p className="text-gray-600 dark:text-gray-300">Sign in to access your sales intelligence platform</p>
+          <div className="hidden lg:block mb-10">
+            <h1 className="text-4xl text-gray-900 dark:text-gray-100 mb-3 font-bold" style={{ fontVariationSettings: "'wght' 700" }}>Welcome Back</h1>
+            <p className="text-lg text-gray-600 dark:text-gray-300">Sign in to access your sales intelligence platform</p>
           </div>
 
           {/* Welcome Message for Beta Users */}
@@ -202,20 +224,30 @@ const LoginScreen: React.FC = () => {
           
           {/* Demo Credentials - Only show for login */}
           {!isSignUp && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Demo Credentials:</h3>
-              <div className="space-y-1 text-sm">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-2xl p-6 mb-8 shadow-sm"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="font-bold text-blue-900 dark:text-blue-200 text-lg">Demo Accounts</h3>
+              </div>
+              <div className="space-y-2">
                 {demoCredentials.map((cred, index) => (
-                  <div key={index} className="flex justify-between text-blue-800 dark:text-blue-300">
-                    <span>{cred.email}</span>
-                    <span className="font-medium">{cred.role}</span>
+                  <div key={index} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
+                    <span className="text-sm text-blue-800 dark:text-blue-300 font-medium">{cred.email}</span>
+                    <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 px-2 py-1 rounded-full">{cred.role}</span>
                   </div>
                 ))}
-                <div className="text-blue-700 dark:text-blue-400 text-xs mt-2">
-                  Password: <span className="font-mono bg-blue-100 dark:bg-blue-800 px-1 rounded">password123</span>
+                <div className="text-blue-700 dark:text-blue-400 text-sm mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                  Password for all accounts: <span className="font-mono bg-blue-100 dark:bg-blue-800 px-2 py-0.5 rounded text-blue-900 dark:text-blue-100">password123</span>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Login/Signup Form */}
@@ -243,7 +275,7 @@ const LoginScreen: React.FC = () => {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                    className="w-full px-4 py-3.5 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 text-base hover:border-gray-400 dark:hover:border-gray-500"
                     placeholder="Enter your full name"
                     required
                   />
@@ -290,7 +322,7 @@ const LoginScreen: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                  className="w-full px-4 py-3.5 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 text-base hover:border-gray-400 dark:hover:border-gray-500"
                   placeholder={isSignUp ? "Choose a strong password (min 8 characters)" : "Enter your password"}
                   required
                   minLength={isSignUp ? 8 : undefined}
@@ -443,10 +475,17 @@ const LoginScreen: React.FC = () => {
           )}
 
           {/* Footer */}
-          <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-300">
-            <p>© 2025 Campbell & Co. All rights reserved.</p>
-            <p className="mt-1">
-              <span className="font-medium">W.O.L.F:</span> Wisdom • Opportunity • Leadership • Focus
+          <div className="mt-12 text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                <img src="/wolf-logo.svg" alt="W.O.L.F" className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Campbell & Co. Group Benefits</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">© 2025 Campbell & Co. All rights reserved.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              <span className="font-semibold text-primary-600 dark:text-primary-400">W.O.L.F:</span> 
+              <span className="text-gray-500 dark:text-gray-400">Wisdom • Opportunity • Leadership • Focus</span>
             </p>
           </div>
         </motion.div>

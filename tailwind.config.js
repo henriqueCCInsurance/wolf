@@ -137,19 +137,9 @@ export default {
       },
       // Modern font system with variable font support
       fontFamily: {
-        'sans': [
-          ['Inter Variable', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-          { fontFeatureSettings: '"ss01", "ss02", "ss03", "ss04"' }
-        ],
-        'display': [
-          ['Cal Sans', 'Inter Variable', 'Inter', 'system-ui', 'sans-serif'],
-          { fontFeatureSettings: '"ss01", "ss02"' }
-        ],
-        'mono': [
-          ['JetBrains Mono Variable', 'JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
-          { fontFeatureSettings: '"ss01", "ss02", "zero", "cv03"' }
-        ],
-        'lato': ['Lato', 'sans-serif'], // Keep for brand consistency
+        'sans': ['Inter Variable', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        'display': ['Inter Variable', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        'mono': ['JetBrains Mono Variable', 'JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
       },
       // Enhanced typography scale for 2025
       fontSize: {
