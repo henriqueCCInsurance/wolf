@@ -131,8 +131,8 @@ const LoginScreen: React.FC = () => {
               <div className="text-center">
                 {/* Wolf Logo */}
                 <div className="mb-8">
-                  <div className="w-48 h-32 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
-                    <img src="/wolf-logo.svg" alt="W.O.L.F Logo" className="w-full h-full object-contain drop-shadow-2xl" />
+                  <div className="w-32 h-32 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
+                    <img src="/wolf-logo.png" alt="W.O.L.F Logo" className="w-full h-full object-contain drop-shadow-2xl" />
                   </div>
                 </div>
                 
