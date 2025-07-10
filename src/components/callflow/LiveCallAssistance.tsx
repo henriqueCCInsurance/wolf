@@ -32,6 +32,7 @@ import SuccessButton from '@/components/gamification/SuccessButton';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
 import ReadyToCallIndicator from '@/components/callflow/ReadyToCallIndicator';
 import ClickablePhone from '@/components/common/ClickablePhone';
+import TimerErrorBoundary from '@/components/common/TimerErrorBoundary';
 import { useAppStore } from '@/store';
 import { callObjectives } from '@/data/content';
 import { zoomPhoneService } from '@/services/zoomPhone';
@@ -804,12 +805,14 @@ const LiveCallAssistance: React.FC = () => {
 
         {/* Call Timer */}
         <Card className={isCallActive ? "border-primary-500 shadow-lg" : ""}>
-          <CallTimer 
-            persona={prospect.persona}
-            onTimeUpdate={() => {}}
-            onCallEnd={handleEndCall}
-            isCallActive={isCallActive}
-          />
+          <TimerErrorBoundary>
+            <CallTimer 
+              persona={prospect.persona}
+              onTimeUpdate={() => {}}
+              onCallEnd={handleEndCall}
+              isCallActive={isCallActive}
+            />
+          </TimerErrorBoundary>
         </Card>
 
         {/* Call Notes */}
@@ -1034,7 +1037,7 @@ Tips:
         {/* Battle Card Quick Reference */}
         {selectedContent.length > 0 && (
           <CollapsibleSection 
-            title="Battle Card Content" 
+            title="Call Card Content" 
             subtitle="Your selected talking points and strategies"
             defaultExpanded={false}
             badge={`${selectedContent.length} items`}
@@ -1066,7 +1069,7 @@ Tips:
       <div className="space-y-6">
         {/* Access Library Button - Moved above call flow progress */}
         {selectedContent.length > 0 && (
-          <Card title="Content Library" subtitle="Access your scripts and talking points">
+          <Card title="Script Library" subtitle="Access your scripts and talking points">
             <Button
               onClick={handleAccessLibrary}
               variant="outline"

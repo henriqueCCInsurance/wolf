@@ -162,7 +162,7 @@ export const useAppStore = create<AppState>()(
             attemptNumber: log.attemptNumber,
             additionalInfo: log.additionalInfo
           });
-          console.log('✅ Call log saved to Supabase successfully');
+          // Call log saved to Supabase successfully
         } catch (supabaseError) {
           console.warn('Supabase call log save failed, trying Netlify DB:', supabaseError);
           
@@ -184,10 +184,10 @@ export const useAppStore = create<AppState>()(
               additionalInfo: log.additionalInfo || {},
               userId: 'current-user' // TODO: Get from authentication context
             });
-            console.log('✅ Call log saved to Netlify DB successfully');
+            // Call log saved to Netlify DB successfully
           } catch (netlifyError) {
             console.error('Both database saves failed:', { supabaseError, netlifyError });
-            console.log('📱 Call log saved to localStorage only');
+            // Call log saved to localStorage only
           }
         }
         

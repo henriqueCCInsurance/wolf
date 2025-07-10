@@ -17,6 +17,15 @@ const SimplifiedCallGuide: React.FC = () => {
   const [callTimer, setCallTimer] = useState<NodeJS.Timeout | null>(null);
   const [successPrediction, setSuccessPrediction] = useState<ReturnType<typeof SuccessPredictionService.prototype.calculatePrediction> | null>(null);
 
+  // Calculate success prediction when component mounts or prospect changes
+  React.useEffect(() => {
+    if (prospect && !callStarted) {
+      const predictionService = SuccessPredictionService.getInstance();
+      const prediction = predictionService.calculatePrediction(prospect, callLogs);
+      setSuccessPrediction(prediction);
+    }
+  }, [prospect, callLogs, callStarted]);
+
   if (!prospect) {
     return (
       <div className="text-center py-12">
@@ -34,15 +43,6 @@ const SimplifiedCallGuide: React.FC = () => {
   const selectedPersona = personas.find(p => p.id === prospect.persona);
   const selectedIndustry = industries.find(i => i.id === prospect.industry);
   const personaContent = contentLibrary.filter((c: any) => c.persona === prospect.persona);
-
-  // Calculate success prediction when component mounts or prospect changes
-  React.useEffect(() => {
-    if (prospect && !callStarted) {
-      const predictionService = SuccessPredictionService.getInstance();
-      const prediction = predictionService.calculatePrediction(prospect, callLogs);
-      setSuccessPrediction(prediction);
-    }
-  }, [prospect, callLogs, callStarted]);
 
   const handleStartCall = async () => {
     if (!prospect?.contactPhone) {

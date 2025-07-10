@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { unstable_batchedUpdates } from 'react-dom';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
@@ -25,7 +26,7 @@ import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
-import ContentLibrary from '@/components/common/ContentLibrary';
+import ScriptLibrary from '@/components/callguide/ScriptLibrary';
 import EnhancedLiveIntelligence from '@/components/intelligence/EnhancedLiveIntelligence';
 import RelationshipMap from '@/components/intelligence/RelationshipMap';
 import ContactImporter from './ContactImporter';
@@ -391,112 +392,235 @@ const IntegratedCallPlanner: React.FC = () => {
   };
 
   const handleLockContacts = async () => {
-    setContactsLocked(true);
-    setGatheringIntelligence(true);
+    // Validate inputs before starting
+    if (!contacts || contacts.length === 0) {
+      alert('No contacts available to lock. Please import or add contacts first.');
+      return;
+    }
+    
+    if (!selectedContacts || selectedContacts.size === 0) {
+      alert('No contacts selected. Please select at least one contact to lock.');
+      return;
+    }
+    
+    // Limit batch size to prevent crashes
+    const MAX_BATCH_SIZE = 50;
+    if (selectedContacts.size > MAX_BATCH_SIZE) {
+      alert(`Too many contacts selected (${selectedContacts.size}). Please select no more than ${MAX_BATCH_SIZE} contacts at a time.`);
+      return;
+    }
+    
+    // Batch state updates to prevent race conditions
+    unstable_batchedUpdates(() => {
+      setContactsLocked(true);
+      setGatheringIntelligence(true);
+    });
     
     try {
-      // Get selected contacts
-      const contactsToLock = contacts.filter(c => selectedContacts.has(c.id));
+      // Get selected contacts with safety checks
+      const contactsToLock = contacts.filter(c => {
+        try {
+          return c && c.id && selectedContacts.has(c.id);
+        } catch (error) {
+          console.warn('Error filtering contact:', c, error);
+          return false;
+        }
+      });
+      
+      if (contactsToLock.length === 0) {
+        throw new Error('No valid contacts found after filtering');
+      }
       
       // TODO: Get userId from authentication context
       const userId = 'current-user';
       
       // If we don't have an active sequence, create one
       if (!currentSequence) {
-        // Save contacts to database if they don't have IDs yet
-        const savedContacts = await Promise.all(
-          contactsToLock.map(async (contact) => {
+        // Save contacts to database with individual error handling
+        const savedContacts: DatabaseContact[] = [];
+        const failedContacts: Contact[] = [];
+        
+        for (const contact of contactsToLock) {
+          try {
             if (!contact.id || contact.id.startsWith('temp-')) {
+              // Validate required fields before creating
+              if (!contact.companyName || !contact.contactName) {
+                console.warn('Skipping contact with missing required fields:', contact);
+                failedContacts.push(contact);
+                continue;
+              }
+              
               // Create new contact in database
               const dbContact = await NetlifyDatabaseService.contactService.create({
                 userId,
                 company: contact.companyName,
                 name: contact.contactName,
-                title: contact.position || contact.title,
-                phone: contact.phone,
-                email: contact.email,
-                industry: contact.industry,
-                employeeCount: contact.employeeCount,
-                revenue: contact.revenue,
-                personaType: contact.persona,
+                title: contact.position || contact.title || '',
+                phone: contact.phone?.toString() || '',
+                email: contact.email?.toString() || '',
+                industry: contact.industry || '',
+                employeeCount: contact.employeeCount?.toString() || '0',
+                revenue: contact.revenue?.toString() || '0',
+                personaType: contact.persona || 'cost-conscious-employer',
                 status: 'new' as const,
                 tags: [],
-                notes: contact.notes
+                notes: contact.notes || ''
               });
-              return dbContact;
+              savedContacts.push(dbContact);
+            } else {
+              // Contact already exists, convert to DatabaseContact format
+              const existingContact = {
+                id: contact.id,
+                userId,
+                company: contact.companyName || '',
+                name: contact.contactName || '',
+                title: contact.title || '',
+                phone: contact.phone?.toString() || '',
+                email: contact.email?.toString() || '',
+                industry: contact.industry || '',
+                employeeCount: contact.employeeCount?.toString() || '0',
+                revenue: contact.revenue?.toString() || '0',
+                personaType: contact.persona || 'cost-conscious-employer',
+                status: (contact.status as DatabaseContact['status']) || 'new',
+                tags: [],
+                notes: contact.notes || '',
+                createdAt: new Date(),
+                updatedAt: new Date()
+              } as DatabaseContact;
+              savedContacts.push(existingContact);
             }
-            // Contact already exists, convert to DatabaseContact format
-            return {
-              id: contact.id,
-              userId,
-              company: contact.companyName,
-              name: contact.contactName,
-              title: contact.title,
-              phone: contact.phone,
-              email: contact.email,
-              industry: contact.industry,
-              employeeCount: contact.employeeCount,
-              revenue: contact.revenue,
-              personaType: contact.persona,
-              status: contact.status as DatabaseContact['status'],
-              tags: [],
-              notes: contact.notes,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            } as DatabaseContact;
-          })
-        );
+          } catch (contactError) {
+            console.error('Failed to save contact:', contact, contactError);
+            failedContacts.push(contact);
+          }
+        }
+        
+        if (savedContacts.length === 0) {
+          throw new Error(`Failed to save any contacts. ${failedContacts.length} contacts failed.`);
+        }
+        
+        if (failedContacts.length > 0) {
+          console.warn(`${failedContacts.length} contacts failed to save:`, failedContacts);
+          // Show user-friendly warning but continue with successful contacts
+          alert(`Warning: ${failedContacts.length} of ${contactsToLock.length} contacts could not be saved. Continuing with ${savedContacts.length} successfully saved contacts.`);
+        }
         
         // Create a new sequence with these contacts
-        const sequence = await NetlifyDatabaseService.callSequenceService.create({
-          userId,
-          name: `Planning Session ${new Date().toLocaleDateString()}`,
-          contacts: savedContacts.map(c => ({
-            id: c.id,
-            companyName: 'company' in c ? c.company : c.companyName,
-            contactName: 'name' in c ? c.name : c.contactName,
-            status: 'pending' as const,
-            industry: 'industry' in c ? c.industry || '' : c.industry || '',
-            source: 'manual' as const
-          })),
-          contactIds: savedContacts.map(c => c.id),
-          totalContacts: savedContacts.length,
-          status: 'planned' as const,
-          sprintSize: 10, // Default sprint size
-          mode: mode === 'imported-list' ? 'imported' : mode === 'crm-sync' ? 'crm-sync' : 'standalone',
-          updatedAt: new Date(),
-          contactedCount: 0,
-          qualifiedCount: 0
-        });
-        
-        setCurrentSequence(sequence);
-        useAppStore.getState().setActiveSequence(sequence.id);
+        try {
+          const sequence = await NetlifyDatabaseService.callSequenceService.create({
+            userId,
+            name: `Planning Session ${new Date().toLocaleDateString()}`,
+            contacts: savedContacts.map(c => {
+              try {
+                return {
+                  id: c.id,
+                  companyName: ('company' in c ? c.company : (c as any).companyName) || 'Unknown Company',
+                  contactName: ('name' in c ? c.name : (c as any).contactName) || 'Unknown Contact',
+                  status: 'pending' as const,
+                  industry: ('industry' in c ? c.industry || '' : c.industry || '') || '',
+                  source: 'manual' as const
+                };
+              } catch (mappingError) {
+                console.error('Error mapping contact for sequence:', c, mappingError);
+                return {
+                  id: c.id || 'unknown',
+                  companyName: 'Unknown Company',
+                  contactName: 'Unknown Contact', 
+                  status: 'pending' as const,
+                  industry: '',
+                  source: 'manual' as const
+                };
+              }
+            }),
+            contactIds: savedContacts.map(c => c.id).filter(id => id), // Filter out any undefined IDs
+            totalContacts: savedContacts.length,
+            status: 'planned' as const,
+            sprintSize: Math.min(10, savedContacts.length), // Ensure sprint size doesn't exceed contact count
+            mode: mode === 'imported-list' ? 'imported' : mode === 'crm-sync' ? 'crm-sync' : 'standalone',
+            updatedAt: new Date(),
+            contactedCount: 0,
+            qualifiedCount: 0
+          });
+          
+          // Batch sequence state updates
+          unstable_batchedUpdates(() => {
+            setCurrentSequence(sequence);
+            useAppStore.getState().setActiveSequence(sequence.id);
+          });
+        } catch (sequenceError) {
+          console.error('Failed to create call sequence:', sequenceError);
+          const errorMessage = sequenceError instanceof Error ? sequenceError.message : 'Unknown error';
+          throw new Error(`Failed to create call sequence: ${errorMessage}`);
+        }
       }
       
-      // Trigger real-time company intelligence gathering
-      const { CompanyIntelligenceService } = await import('@/services/companyIntelligence');
-      
-      // Convert contacts to prospects for intelligence gathering
-      const contactsAsProspects = contactsToLock.map(contact => ({
-        ...contact,
-        persona: contact.persona || 'cost-conscious-employer' as PersonaType
-      }));
-      
-      const intelligencePromise = CompanyIntelligenceService.getMultipleCompanyIntelligence(contactsAsProspects);
-      
-      // Store the promise for later use
-      localStorage.setItem('wolf-den-intelligence-loading', 'true');
-      
-      // Process intelligence in background
-      intelligencePromise.then(intelligence => {
-        localStorage.setItem('wolf-den-company-intelligence', JSON.stringify(Object.fromEntries(intelligence)));
+      // Trigger real-time company intelligence gathering with timeout and error handling
+      try {
+        const { CompanyIntelligenceService } = await import('@/services/companyIntelligence');
+        
+        // Convert contacts to prospects for intelligence gathering with validation
+        const contactsAsProspects = contactsToLock
+          .filter(contact => contact && contact.companyName) // Only include contacts with company names
+          .map(contact => {
+            try {
+              return {
+                ...contact,
+                persona: contact.persona || 'cost-conscious-employer' as PersonaType
+              };
+            } catch (mappingError) {
+              console.warn('Error mapping contact for intelligence:', contact, mappingError);
+              return null;
+            }
+          })
+          .filter((prospect): prospect is NonNullable<typeof prospect> => prospect !== null); // Remove any null values with type guard
+        
+        if (contactsAsProspects.length === 0) {
+          console.warn('No valid contacts for intelligence gathering');
+          setGatheringIntelligence(false);
+        } else {
+          // Set a timeout for intelligence gathering (30 seconds max)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Intelligence gathering timeout')), 30000)
+          );
+          
+          const intelligencePromise = CompanyIntelligenceService.getMultipleCompanyIntelligence(contactsAsProspects);
+          
+          // Store the promise for later use
+          localStorage.setItem('wolf-den-intelligence-loading', 'true');
+          
+          // Race between intelligence gathering and timeout
+          Promise.race([intelligencePromise, timeoutPromise])
+            .then((intelligence: any) => {
+              try {
+                localStorage.setItem('wolf-den-company-intelligence', JSON.stringify(Object.fromEntries(intelligence)));
+                localStorage.removeItem('wolf-den-intelligence-loading');
+                unstable_batchedUpdates(() => {
+                  setGatheringIntelligence(false);
+                });
+              } catch (storageError) {
+                console.error('Error storing intelligence data:', storageError);
+                localStorage.removeItem('wolf-den-intelligence-loading');
+                unstable_batchedUpdates(() => {
+                  setGatheringIntelligence(false);
+                });
+              }
+            })
+            .catch(error => {
+              console.error('Error gathering company intelligence:', error);
+              localStorage.removeItem('wolf-den-intelligence-loading');
+              unstable_batchedUpdates(() => {
+                setGatheringIntelligence(false);
+              });
+              // Don't show alert for intelligence failures - it's not critical
+            });
+        }
+      } catch (importError) {
+        console.error('Failed to import CompanyIntelligenceService:', importError);
         localStorage.removeItem('wolf-den-intelligence-loading');
-        setGatheringIntelligence(false);
-      }).catch(error => {
-        console.error('Error gathering company intelligence:', error);
-        localStorage.removeItem('wolf-den-intelligence-loading');
-        setGatheringIntelligence(false);
-      });
+        unstable_batchedUpdates(() => {
+          setGatheringIntelligence(false);
+        });
+      }
       
       // After a brief delay, show the guide section
       setTimeout(() => {
@@ -504,19 +628,65 @@ const IntegratedCallPlanner: React.FC = () => {
       }, 500);
       
     } catch (error) {
-      console.error('Error loading CompanyIntelligenceService:', error);
-      setGatheringIntelligence(false);
+      console.error('Error in handleLockContacts:', error);
+      
+      // Reset states on error with batched updates
+      localStorage.removeItem('wolf-den-intelligence-loading');
+      unstable_batchedUpdates(() => {
+        setContactsLocked(false);
+        setGatheringIntelligence(false);
+      });
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to lock contacts: ${errorMessage}\n\nPlease try again with fewer contacts or check your internet connection.`);
+      
+      // Still show guide section even on error
       setShowGuideSection(true);
     }
   };
 
   const handleLockAllContacts = async () => {
-    // Select all contacts first
-    const allContactIds = new Set(contacts.map(c => c.id));
-    setSelectedContacts(allContactIds);
+    // Validate contacts array
+    if (!contacts || contacts.length === 0) {
+      alert('No contacts available to lock.');
+      return;
+    }
     
-    // Use existing lock logic
-    await handleLockContacts();
+    // Limit batch size for performance
+    const MAX_BATCH_SIZE = 50;
+    if (contacts.length > MAX_BATCH_SIZE) {
+      alert(`Too many contacts (${contacts.length}). Please select up to ${MAX_BATCH_SIZE} contacts manually instead of using "Lock All".`);
+      return;
+    }
+    
+    try {
+      // Select all contacts first with safety checks
+      const allContactIds = new Set(
+        contacts
+          .filter(c => c && c.id) // Only include contacts with valid IDs
+          .map(c => c.id)
+      );
+      
+      if (allContactIds.size === 0) {
+        alert('No valid contacts found to lock.');
+        return;
+      }
+      
+      unstable_batchedUpdates(() => {
+        setSelectedContacts(allContactIds);
+      });
+      
+      // Use existing lock logic
+      await handleLockContacts();
+    } catch (error) {
+      console.error('Error in handleLockAllContacts:', error);
+      alert('Failed to lock all contacts. Please try selecting contacts individually.');
+      unstable_batchedUpdates(() => {
+        setContactsLocked(false);
+        setGatheringIntelligence(false);
+      });
+    }
   };
 
   const handleUnlockContacts = () => {
@@ -1061,10 +1231,10 @@ const IntegratedCallPlanner: React.FC = () => {
         {/* Content Library - Only in Advanced Mode */}
         {prospect && advancedMode && !showGuideSection && (
           <Card 
-            title="Step 6: Strategic Content Selection"
+            title="Step 6: Script Library"
             subtitle="Choose your conversation weapons for this specific engagement"
           >
-            <ContentLibrary />
+            <ScriptLibrary />
           </Card>
         )}
 
