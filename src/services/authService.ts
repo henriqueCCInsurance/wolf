@@ -37,7 +37,7 @@ class AuthService {
         email: storedUser.email,
         name: storedUser.name,
         role: storedUser.role || 'salesperson',
-        createdAt: new Date(storedUser.createdAt),
+        createdAt: storedUser.createdAt ? new Date(storedUser.createdAt) : new Date(),
         settings: {
           theme: 'light' as const,
           notifications: true,

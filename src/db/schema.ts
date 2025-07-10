@@ -46,7 +46,7 @@ export const callLogs = pgTable('call_logs', {
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   leadId: text('lead_id').notNull(),
   contactId: uuid('contact_id').references(() => contacts.id),
-  battleCardId: uuid('battle_card_id').references(() => battleCards.id),
+  callCardId: uuid('call_card_id').references(() => callCards.id),
   outcome: callOutcomeEnum('outcome').notNull(),
   intel: text('intel').notNull(),
   bestTalkingPoint: text('best_talking_point').notNull(),
@@ -60,7 +60,7 @@ export const callLogs = pgTable('call_logs', {
   createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
-export const battleCards = pgTable('battle_cards', {
+export const callCards = pgTable('call_cards', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   contactId: uuid('contact_id').references(() => contacts.id),
@@ -118,7 +118,7 @@ export const companyIntelligence = pgTable('company_intelligence', {
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   callLogs: many(callLogs),
-  battleCards: many(battleCards),
+  callCards: many(callCards),
   callSequences: many(callSequences),
   contacts: many(contacts),
   preferences: one(userPreferences)
@@ -131,9 +131,9 @@ export const callLogsRelations = relations(callLogs, ({ one }) => ({
   })
 }));
 
-export const battleCardsRelations = relations(battleCards, ({ one }) => ({
+export const callCardsRelations = relations(callCards, ({ one }) => ({
   user: one(users, {
-    fields: [battleCards.userId],
+    fields: [callCards.userId],
     references: [users.id]
   })
 }));
@@ -151,7 +151,7 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
     references: [users.id]
   }),
   callLogs: many(callLogs),
-  battleCards: many(battleCards)
+  callCards: many(callCards)
 }));
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
@@ -166,8 +166,8 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type CallLog = typeof callLogs.$inferSelect;
 export type NewCallLog = typeof callLogs.$inferInsert;
-export type BattleCard = typeof battleCards.$inferSelect;
-export type NewBattleCard = typeof battleCards.$inferInsert;
+export type CallCard = typeof callCards.$inferSelect;
+export type NewCallCard = typeof callCards.$inferInsert;
 export type CallSequence = typeof callSequences.$inferSelect;
 export type NewCallSequence = typeof callSequences.$inferInsert;
 export type Contact = typeof contacts.$inferSelect;

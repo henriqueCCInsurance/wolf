@@ -122,65 +122,92 @@ const LoginScreen: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            {/* Logo */}
-            <div className="mb-12">
-              <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 inline-block shadow-2xl border border-white/20">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center shadow-2xl backdrop-blur-sm border border-white/30 transform hover:scale-105 transition-transform duration-300">
-                    <img src="/wolf-logo.svg" alt="W.O.L.F Logo" className="w-16 h-16" />
+            {/* Modern Logo Section */}
+            <div className="mb-16">
+              <div className="text-center">
+                {/* Wolf Logo */}
+                <div className="mb-8">
+                  <div className="w-32 h-32 mx-auto mb-6 transform hover:scale-105 transition-transform duration-300">
+                    <img src="/wolf-logo-firefox-style.svg" alt="W.O.L.F Logo" className="w-full h-full drop-shadow-lg" />
                   </div>
                 </div>
-                <div className="text-6xl font-bold text-white mb-3 tracking-normal" style={{ fontVariationSettings: "'wght' 700" }}>
-                  W.O.L.F
-                </div>
-                <div className="text-white/80 text-base font-medium tracking-wider uppercase">
-                  Campbell & Co. Sales Enablement
+                
+                {/* App Name with Text Shadow */}
+                <div className="mb-4">
+                  <h1 className="text-7xl font-black text-white mb-2 tracking-tight" 
+                      style={{ 
+                        fontVariationSettings: "'wght' 900",
+                        textShadow: '2px 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.3)'
+                      }}>
+                    W.O.L.F
+                  </h1>
+                  <div className="text-white/90 text-lg font-semibold tracking-wider uppercase" 
+                       style={{ textShadow: '1px 2px 4px rgba(0,0,0,0.7)' }}>
+                    Campbell & Co. Sales Enablement
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Enhanced Tagline */}
-            <h1 className="text-5xl mb-6 leading-tight font-bold" style={{ fontVariationSettings: "'wght' 700" }}>
-              Sales Intelligence for 
-              <span className="block text-primary-300 text-6xl mt-2" style={{ fontVariationSettings: "'wght' 800" }}>Strategic Confidence</span>
-            </h1>
-            <p className="text-xl text-white/80 mb-12 max-w-xl mx-auto leading-relaxed font-normal">
-              Transform cold call preparation from anxiety into competitive advantage with persona-driven intelligence and battle card generation
-            </p>
+            {/* Impactful Tagline */}
+            <div className="mb-12 text-center">
+              <h2 className="text-4xl mb-6 leading-tight font-bold text-white" 
+                  style={{ 
+                    fontVariationSettings: "'wght' 700",
+                    textShadow: '2px 4px 8px rgba(0,0,0,0.6)'
+                  }}>
+                Sales Intelligence for 
+                <span className="block text-primary-300 text-5xl mt-3 font-black" 
+                      style={{ 
+                        fontVariationSettings: "'wght' 900",
+                        textShadow: '2px 4px 8px rgba(0,0,0,0.6)'
+                      }}>
+                  Strategic Confidence
+                </span>
+              </h2>
+              <p className="text-xl text-white/90 max-w-2xl mx-auto leading-relaxed font-medium" 
+                 style={{ textShadow: '1px 2px 4px rgba(0,0,0,0.8)' }}>
+                Transform cold call preparation from anxiety into competitive advantage with persona-driven intelligence and battle card generation
+              </p>
+            </div>
 
-            {/* Features */}
+            {/* Features with Enhanced Styling */}
             <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto">
               <motion.div 
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+                style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
               >
-                <Target className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
-                <div className="text-base font-semibold">Smart Targeting</div>
-                <div className="text-xs text-white/60 mt-1">AI-powered insights</div>
+                <Target className="w-8 h-8 text-primary-300 mb-3 mx-auto drop-shadow-lg" />
+                <div className="text-base font-semibold text-white" style={{ textShadow: '1px 2px 4px rgba(0,0,0,0.7)' }}>Smart Targeting</div>
+                <div className="text-xs text-white/70 mt-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>AI-powered insights</div>
               </motion.div>
               <motion.div 
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+                style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
               >
-                <TrendingUp className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
-                <div className="text-base font-semibold">Performance Insights</div>
-                <div className="text-xs text-white/60 mt-1">Real-time analytics</div>
+                <TrendingUp className="w-8 h-8 text-primary-300 mb-3 mx-auto drop-shadow-lg" />
+                <div className="text-base font-semibold text-white" style={{ textShadow: '1px 2px 4px rgba(0,0,0,0.7)' }}>Performance Insights</div>
+                <div className="text-xs text-white/70 mt-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>Real-time analytics</div>
               </motion.div>
               <motion.div 
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+                style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
               >
-                <Users className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
-                <div className="text-base font-semibold">Team Collaboration</div>
-                <div className="text-xs text-white/60 mt-1">Share & learn together</div>
+                <Users className="w-8 h-8 text-primary-300 mb-3 mx-auto drop-shadow-lg" />
+                <div className="text-base font-semibold text-white" style={{ textShadow: '1px 2px 4px rgba(0,0,0,0.7)' }}>Team Collaboration</div>
+                <div className="text-xs text-white/70 mt-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>Share & learn together</div>
               </motion.div>
               <motion.div 
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 cursor-pointer"
+                style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
               >
-                <Shield className="w-8 h-8 text-primary-300 mb-3 mx-auto" />
-                <div className="text-base font-semibold">Secure Platform</div>
-                <div className="text-xs text-white/60 mt-1">Enterprise-grade security</div>
+                <Shield className="w-8 h-8 text-primary-300 mb-3 mx-auto drop-shadow-lg" />
+                <div className="text-base font-semibold text-white" style={{ textShadow: '1px 2px 4px rgba(0,0,0,0.7)' }}>Secure Platform</div>
+                <div className="text-xs text-white/70 mt-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>Enterprise-grade security</div>
               </motion.div>
             </div>
           </motion.div>
@@ -198,7 +225,7 @@ const LoginScreen: React.FC = () => {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-3xl p-6 inline-block mb-4 shadow-xl">
-              <img src="/wolf-logo.svg" alt="W.O.L.F Logo" className="w-12 h-12 mx-auto mb-2" />
+              <img src="/wolf-logo-firefox-style.svg" alt="W.O.L.F Logo" className="w-12 h-12 mx-auto mb-2" />
               <div className="text-2xl font-bold tracking-normal" style={{ fontVariationSettings: "'wght' 700" }}>W.O.L.F</div>
             </div>
             <h1 className="text-3xl text-gray-900 dark:text-gray-100 font-bold mb-2">Welcome Back</h1>

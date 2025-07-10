@@ -15,7 +15,10 @@ export type PersonaType =
   | 'cost-conscious-employer'
   | 'benefits-optimizer'
   | 'roi-focused-executive'
-  | 'gatekeeper';
+  | 'gatekeeper'
+  | 'strategic-ceo'
+  | 'operations-leader'
+  | 'culture-champion';
 
 export interface PersonaData {
   id: PersonaType;
@@ -78,7 +81,7 @@ export interface CallLog {
   };
 }
 
-export interface BattleCard {
+export interface CallCard {
   lead: Lead;
   selectedContent: ContentItem[];
   dynamicIntelligence: string[];

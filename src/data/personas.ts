@@ -107,5 +107,92 @@ export const personas: PersonaData[] = [
       'Unclear about the purpose of the call',
       'Attempts to bypass proper channels'
     ]
+  },
+  {
+    id: 'strategic-ceo',
+    title: 'The Strategic CEO',
+    description: 'CEO / President / Managing Director',
+    profile: 'Visionary leader focused on growth, culture, and competitive advantage. Makes final decisions on strategic investments including benefits.',
+    keyPressures: [
+      'Attracting and retaining top talent in competitive market',
+      'Building distinctive company culture as competitive differentiator',
+      'Managing growth while maintaining profitability and employee satisfaction',
+      'Balancing stakeholder interests (employees, shareholders, customers)'
+    ],
+    language: [
+      'Strategic vision',
+      'Market positioning',
+      'Competitive advantage',
+      'Company culture',
+      'Talent strategy',
+      'Innovation',
+      'Stakeholder value',
+      'Growth trajectory'
+    ],
+    digitalExpectations: 'Expects executive dashboards and strategic insights. Values data that connects benefits to business outcomes and competitive positioning.',
+    redFlags: [
+      'Too much operational detail without strategic context',
+      'Cannot connect benefits to business strategy',
+      'Lack of industry benchmarking or competitive insights',
+      'Cookie-cutter approach without customization'
+    ]
+  },
+  {
+    id: 'operations-leader',
+    title: 'The Operations Leader',
+    description: 'COO / VP Operations / Director of Operations',
+    profile: 'Efficiency-focused executive who ensures smooth daily operations. Views benefits through lens of productivity and operational excellence.',
+    keyPressures: [
+      'Minimizing operational disruptions and downtime',
+      'Optimizing workforce productivity and efficiency',
+      'Managing remote/hybrid work complexities',
+      'Reducing administrative burden on management team'
+    ],
+    language: [
+      'Operational efficiency',
+      'Process optimization',
+      'Productivity metrics',
+      'Downtime reduction',
+      'Workflow automation',
+      'Resource allocation',
+      'Performance indicators',
+      'Scalability'
+    ],
+    digitalExpectations: 'High focus on integration and automation. Values solutions that streamline processes and reduce manual intervention.',
+    redFlags: [
+      'Complex implementation that disrupts operations',
+      'High administrative overhead',
+      'Poor integration with existing systems',
+      'Inability to scale with business growth'
+    ]
+  },
+  {
+    id: 'culture-champion',
+    title: 'The Culture Champion',
+    description: 'Chief People Officer / VP People & Culture / Director of Culture',
+    profile: 'Progressive leader transforming workplace culture. Champions employee experience, diversity, equity, inclusion, and wellbeing initiatives.',
+    keyPressures: [
+      'Creating inclusive benefits that serve diverse employee needs',
+      'Addressing mental health crisis and burnout epidemic',
+      'Building employer brand to attract next-gen talent',
+      'Measuring and improving employee experience holistically'
+    ],
+    language: [
+      'Employee experience',
+      'Diversity, equity & inclusion',
+      'Psychological safety',
+      'Wellbeing strategy',
+      'Culture transformation',
+      'Employer value proposition',
+      'Belonging',
+      'Purpose-driven workplace'
+    ],
+    digitalExpectations: 'Expects modern, inclusive digital experiences. Values personalization, accessibility, and data-driven insights into employee wellbeing.',
+    redFlags: [
+      'Outdated or non-inclusive benefit designs',
+      'Lack of mental health and wellbeing focus',
+      'One-size-fits-all approaches',
+      'Cannot discuss DEI considerations in benefits'
+    ]
   }
 ];

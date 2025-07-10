@@ -76,7 +76,8 @@ const LiveCallAssistance: React.FC = () => {
     addCallLog, 
     selectedContent, 
     callSequences, 
-    activeSequenceId 
+    activeSequenceId,
+    callLogs
   } = useAppStore();
   
   // Call states - more granular control
@@ -274,14 +275,24 @@ const LiveCallAssistance: React.FC = () => {
     }
   }, [prospect, isCallActive]);
 
+  // Memoize the call logs length to avoid unnecessary re-renders
+  const callLogsLength = useMemo(() => callLogs.length, [callLogs.length]);
+
   // Update prediction model after successful call
   useEffect(() => {
-    const latestCallLog = useAppStore.getState().callLogs[useAppStore.getState().callLogs.length - 1];
-    if (latestCallLog && latestCallLog.createdAt.getTime() > Date.now() - 5000) {
-      const predictionService = SuccessPredictionService.getInstance();
-      predictionService.updateModel(latestCallLog);
+    const latestCallLog = callLogs[callLogsLength - 1];
+    if (latestCallLog && latestCallLog.createdAt) {
+      // Handle both Date objects and date strings from localStorage/database
+      const createdAtTime = latestCallLog.createdAt instanceof Date 
+        ? latestCallLog.createdAt.getTime() 
+        : new Date(latestCallLog.createdAt).getTime();
+      
+      if (createdAtTime > Date.now() - 5000) {
+        const predictionService = SuccessPredictionService.getInstance();
+        predictionService.updateModel(latestCallLog);
+      }
     }
-  }, [useAppStore.getState().callLogs.length]);
+  }, [callLogsLength, callLogs]);
 
   // Start the call session (timer) without Zoom
   const handleStartSession = () => {

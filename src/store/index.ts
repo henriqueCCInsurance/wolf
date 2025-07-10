@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Prospect, ContentItem, CallLog, BattleCard, WebSearchResult, CallSequence, Contact, CompetitiveEncounter } from '@/types';
+import { Prospect, ContentItem, CallLog, CallCard, WebSearchResult, CallSequence, Contact, CompetitiveEncounter } from '@/types';
 import { DatabaseService } from '@/services/database';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
 import { CompetitiveIntelligenceService } from '@/services/competitiveIntelligence';
@@ -51,8 +51,8 @@ interface AppState {
   addCompetitiveEncounter: (encounter: CompetitiveEncounter) => void;
   
   // Battle cards history
-  battleCards: BattleCard[];
-  addBattleCard: (card: BattleCard) => void;
+  callCards: CallCard[];
+  addCallCard: (card: CallCard) => void;
   
   // Call sequences
   callSequences: CallSequence[];
@@ -100,7 +100,7 @@ export const useAppStore = create<AppState>()(
       selectedContent: [],
       dynamicIntelligence: [],
       callLogs: [],
-      battleCards: [],
+      callCards: [],
       callSequences: [],
       activeSequenceId: null,
       activeCallStartTime: null,
@@ -175,7 +175,7 @@ export const useAppStore = create<AppState>()(
               callDuration: log.callDuration || 0,
               sequenceId: log.sequenceId || null,
               contactId: log.contactId || null,
-              battleCardId: log.battleCardId || null,
+              callCardId: log.callCardId || null,
               startTime: log.startTime?.toISOString() || null,
               endTime: log.endTime?.toISOString() || null,
               attemptNumber: log.attemptNumber || 1,
@@ -238,9 +238,9 @@ export const useAppStore = create<AppState>()(
       },
       
       // Battle card actions
-      addBattleCard: (card) => {
-        const { battleCards } = get();
-        set({ battleCards: [...battleCards, card] });
+      addCallCard: (card) => {
+        const { callCards } = get();
+        set({ callCards: [...callCards, card] });
       },
       
       // Call sequence actions
@@ -317,7 +317,7 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         callLogs: state.callLogs,
-        battleCards: state.battleCards,
+        callCards: state.callCards,
         callSequences: state.callSequences,
         activeSequenceId: state.activeSequenceId,
         advancedMode: state.advancedMode,

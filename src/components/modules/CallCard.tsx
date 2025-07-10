@@ -3,7 +3,7 @@ import { Download, Printer, ArrowLeft, FileText, Target, TrendingUp, Phone, Chev
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
-import EnhancedContentLibrary from '@/components/callguide/EnhancedContentLibrary';
+import ScriptLibrary from '@/components/callguide/ScriptLibrary';
 import LiveIndustryIntelligence from '@/components/intelligence/LiveIndustryIntelligence';
 import RelationshipMap from '@/components/intelligence/RelationshipMap';
 import CompetitiveIntelligence from '@/components/intelligence/CompetitiveIntelligence';
@@ -16,12 +16,12 @@ import { getClosingsByPersonaAndType, getSuccessRateCategory } from '@/data/stra
 import { Contact, PersonaType, ContactRelationship, DatabaseContact } from '@/types';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
 import { useAuth } from '@/contexts/AuthContext';
-import { trackBattleCardCreated } from '@/services/activityTracking';
+import { trackCallCardCreated } from '@/services/activityTracking';
 import { SuccessPredictionService } from '@/services/successPrediction';
 import { SuccessPredictionDisplay } from '@/components/common/SuccessPredictionDisplay';
 
-const CallGuide: React.FC = () => {
-  const { prospect, selectedContent, setCurrentModule, addBattleCard, setProspect, activeSequenceId, callSequences, callLogs } = useAppStore();
+const CallCard: React.FC = () => {
+  const { prospect, selectedContent, setCurrentModule, addCallCard, setProspect, activeSequenceId, callSequences, callLogs } = useAppStore();
   const { user } = useAuth();
   const [lockedContacts, setLockedContacts] = useState<Contact[]>([]);
   const [currentContactIndex, setCurrentContactIndex] = useState(0);
@@ -232,21 +232,21 @@ const CallGuide: React.FC = () => {
       generatedAt: new Date()
     };
     
-    // Add battle card to store and database
-    addBattleCard(callGuide);
+    // Add call card to store and database
+    addCallCard(callGuide);
     
     // Track activity
     if (user) {
-      trackBattleCardCreated(user, {
+      trackCallCardCreated(user, {
         companyName: currentProspect.companyName,
         contactName: currentProspect.contactName,
         industry: currentProspect.industry
       });
     }
     
-    // If we have a contact ID, update the battle card in database
+    // If we have a contact ID, update the call card in database
     if (isMultiContactMode && lockedContacts[currentContactIndex]?.id) {
-      // The addBattleCard function in store already handles database save
+      // The addCallCard function in store already handles database save
     }
     
     // For now, just trigger print dialog
@@ -261,7 +261,7 @@ const CallGuide: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Guide Generator</h1>
           <p className="text-lg text-gray-600">
-            Prepare your battle card and reference materials for {currentProspect.companyName}
+            Prepare your call card and reference materials for {currentProspect.companyName}
           </p>
         </div>
         <div className="flex space-x-3">
@@ -512,7 +512,7 @@ const CallGuide: React.FC = () => {
       {/* Competitive Intelligence */}
       <CollapsibleSection
         title="Competitive Intelligence"
-        subtitle="Battle cards and responses for competitive situations"
+        subtitle="Call cards and responses for competitive situations"
         defaultExpanded={false}
         priority="medium"
       >
@@ -524,12 +524,12 @@ const CallGuide: React.FC = () => {
 
       {/* Enhanced Content Selection */}
       <CollapsibleSection
-        title="Enhanced Content Library"
+        title="Script Library"
         subtitle="Persona-specific openers, talking points, and objection handlers"
         defaultExpanded={false}
         priority="medium"
       >
-        <EnhancedContentLibrary />
+        <ScriptLibrary />
       </CollapsibleSection>
 
       {/* Guide Preview */}
@@ -699,4 +699,4 @@ const CallGuide: React.FC = () => {
   );
 };
 
-export default CallGuide;
+export default CallCard;

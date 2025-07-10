@@ -16,7 +16,7 @@ import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
 // Lazy load modules for code splitting
 const Dashboard = lazy(() => import('@/components/modules/Dashboard'));
 const IntegratedCallPlanner = lazy(() => import('@/components/planning/IntegratedCallPlanner'));
-const CallGuide = lazy(() => import('@/components/modules/BattleCard'));
+const CallGuide = lazy(() => import('@/components/modules/CallCard'));
 const LiveCallAssistance = lazy(() => import('@/components/callflow/LiveCallAssistance'));
 const EnhancedPostGame = lazy(() => import('@/components/analytics/EnhancedPostGame'));
 const HelpCenter = lazy(() => import('@/components/modules/HelpCenter'));

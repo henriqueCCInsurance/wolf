@@ -92,12 +92,12 @@ export const trackMeetingBooked = (user: User, data: {
   useActivityStore.getState().addActivity('meeting-booked', user, data);
 };
 
-export const trackBattleCardCreated = (user: User, data: {
+export const trackCallCardCreated = (user: User, data: {
   companyName: string;
   contactName: string;
   industry: string;
 }) => {
-  useActivityStore.getState().addActivity('battle-card-created', user, data);
+  useActivityStore.getState().addActivity('call-card-created', user, data);
 };
 
 export const trackSuccessCelebration = (user: User, data: {

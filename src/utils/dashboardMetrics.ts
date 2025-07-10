@@ -81,18 +81,24 @@ export const calculateRevenueMetrics = (
   
   // Calculate total potential revenue
   const totalPotential = meetingBookedLogs.reduce((sum, log) => {
-    const battleCard = battleCards.find(bc => 
-      bc.generatedAt && Math.abs(new Date(bc.generatedAt).getTime() - new Date(log.createdAt).getTime()) < 3600000
-    );
+    const battleCard = battleCards.find(bc => {
+      if (!bc.generatedAt) return false;
+      const bcDate = bc.generatedAt instanceof Date ? bc.generatedAt : new Date(bc.generatedAt);
+      const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
+      return Math.abs(bcDate.getTime() - logDate.getTime()) < 3600000;
+    });
     const persona = battleCard?.lead?.persona || 'cost-conscious-employer';
     return sum + DEFAULT_DEAL_SIZES[persona];
   }, 0);
 
   // Calculate pipeline value (meetings + warm follow-ups)
   const totalPipeline = [...meetingBookedLogs, ...followUpLogs].reduce((sum, log) => {
-    const battleCard = battleCards.find(bc => 
-      bc.generatedAt && Math.abs(new Date(bc.generatedAt).getTime() - new Date(log.createdAt).getTime()) < 3600000
-    );
+    const battleCard = battleCards.find(bc => {
+      if (!bc.generatedAt) return false;
+      const bcDate = bc.generatedAt instanceof Date ? bc.generatedAt : new Date(bc.generatedAt);
+      const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
+      return Math.abs(bcDate.getTime() - logDate.getTime()) < 3600000;
+    });
     const persona = battleCard?.lead?.persona || 'cost-conscious-employer';
     const probability = log.outcome === 'meeting-booked' ? 0.8 : 0.4;
     return sum + (DEFAULT_DEAL_SIZES[persona] * probability);
@@ -147,7 +153,7 @@ export const calculateSuccessRateMetrics = (callLogs: CallLog[]): SuccessRateMet
 
   // Current week stats
   const currentWeekLogs = callLogs.filter(log => {
-    const logDate = new Date(log.createdAt);
+    const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
     return logDate >= currentWeekStart;
   });
   
@@ -163,7 +169,7 @@ export const calculateSuccessRateMetrics = (callLogs: CallLog[]): SuccessRateMet
   previousWeekEnd.setDate(currentWeekStart.getDate() - 1);
   
   const previousWeekLogs = callLogs.filter(log => {
-    const logDate = new Date(log.createdAt);
+    const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
     return logDate >= previousWeekStart && logDate <= previousWeekEnd;
   });
   
@@ -197,7 +203,7 @@ export const calculateSuccessRateMetrics = (callLogs: CallLog[]): SuccessRateMet
     weekEnd.setDate(weekStart.getDate() + 6);
     
     const weekLogs = callLogs.filter(log => {
-      const logDate = new Date(log.createdAt);
+      const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
       return logDate >= weekStart && logDate <= weekEnd;
     });
     
@@ -220,7 +226,7 @@ export const calculateSuccessRateMetrics = (callLogs: CallLog[]): SuccessRateMet
     const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
     
     const monthLogs = callLogs.filter(log => {
-      const logDate = new Date(log.createdAt);
+      const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
       return logDate >= monthStart && logDate <= monthEnd;
     });
     
@@ -341,7 +347,8 @@ export const generateDashboardInsights = (
 
   // Activity insights
   const recentActivity = callLogs.filter(log => {
-    const daysSinceCall = (Date.now() - new Date(log.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
+    const daysSinceCall = (Date.now() - logDate.getTime()) / (1000 * 60 * 60 * 24);
     return daysSinceCall <= 7;
   }).length;
 
@@ -392,7 +399,8 @@ export const generateDashboardAlerts = (
 
   // High-value prospect alert
   const highValueProspects = callLogs.filter(log => {
-    const daysSinceCall = (Date.now() - new Date(log.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    const logDate = log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt);
+    const daysSinceCall = (Date.now() - logDate.getTime()) / (1000 * 60 * 60 * 24);
     return daysSinceCall <= 1 && log.outcome === 'meeting-booked';
   });
 

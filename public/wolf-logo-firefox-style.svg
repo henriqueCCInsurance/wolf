@@ -1,0 +1,70 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Firefox-style wolf logo - clean, recognizable silhouette -->
+  <defs>
+    <linearGradient id="wolfBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a5cf4c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7aa030;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="wolfAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7aa030;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5a7621;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Subtle shadow -->
+    <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="rgba(0,0,0,0.15)" />
+    </filter>
+  </defs>
+  
+  <g transform="translate(100, 100)" filter="url(#softShadow)">
+    <!-- Main wolf head silhouette -->
+    <path d="M0 -60 
+             Q-15 -70 -25 -60 L-30 -45 Q-35 -35 -30 -25
+             Q-35 -15 -40 -5 Q-45 10 -40 25 Q-35 40 -20 45
+             Q-10 50 0 48 Q10 50 20 45 Q35 40 40 25
+             Q45 10 40 -5 Q35 -15 30 -25 Q35 -35 30 -45
+             L25 -60 Q15 -70 0 -60 Z" 
+          fill="url(#wolfBody)" />
+    
+    <!-- Left ear -->
+    <path d="M-25 -60 Q-35 -75 -30 -80 Q-25 -85 -18 -78 L-22 -65 Z" 
+          fill="url(#wolfBody)" />
+    
+    <!-- Right ear -->
+    <path d="M25 -60 Q35 -75 30 -80 Q25 -85 18 -78 L22 -65 Z" 
+          fill="url(#wolfBody)" />
+    
+    <!-- Snout definition -->
+    <path d="M-8 -10 Q0 -5 8 -10 Q12 0 8 15 Q0 25 -8 15 Q-12 0 -8 -10 Z" 
+          fill="url(#wolfAccent)" />
+    
+    <!-- Eyes - bright and alert -->
+    <circle cx="-12" cy="-20" r="4" fill="#ffffff" />
+    <circle cx="12" cy="-20" r="4" fill="#ffffff" />
+    <circle cx="-12" cy="-20" r="2" fill="#1e293b" />
+    <circle cx="12" cy="-20" r="2" fill="#1e293b" />
+    
+    <!-- Nose -->
+    <ellipse cx="0" cy="5" rx="2" ry="3" fill="#1e293b" />
+    
+    <!-- Subtle mouth line -->
+    <path d="M0 8 Q-3 12 -6 10 M0 8 Q3 12 6 10" 
+          stroke="#1e293b" stroke-width="1.5" fill="none" stroke-linecap="round" />
+    
+    <!-- Inner ear details -->
+    <ellipse cx="-25" cy="-70" rx="3" ry="6" fill="url(#wolfAccent)" transform="rotate(-15 -25 -70)" />
+    <ellipse cx="25" cy="-70" rx="3" ry="6" fill="url(#wolfAccent)" transform="rotate(15 25 -70)" />
+    
+    <!-- Fur texture lines (very subtle) -->
+    <g stroke="rgba(255,255,255,0.15)" stroke-width="0.5" fill="none">
+      <path d="M-20 -40 Q-15 -35 -18 -30" />
+      <path d="M20 -40 Q15 -35 18 -30" />
+      <path d="M-25 0 Q-20 5 -22 10" />
+      <path d="M25 0 Q20 5 22 10" />
+    </g>
+    
+    <!-- Highlight on forehead -->
+    <ellipse cx="0" cy="-35" rx="8" ry="4" fill="rgba(255,255,255,0.1)" />
+  </g>
+</svg>

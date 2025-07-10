@@ -23,7 +23,7 @@ import { useAppStore } from '@/store';
 import { getContentByCategory, getCategoryCounts, EnhancedContentItem } from '@/data/enhancedContent';
 import { ContentItem } from '@/types';
 
-const EnhancedContentLibrary: React.FC = () => {
+const ScriptLibrary: React.FC = () => {
   const { prospect, selectedContent, addSelectedContent, removeSelectedContent } = useAppStore();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['opener']));
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,7 +43,7 @@ const EnhancedContentLibrary: React.FC = () => {
 
   if (!prospect) {
     return (
-      <Card title="Enhanced Content Library" className="mb-6">
+      <Card title="Script Library" className="mb-6">
         <div className="text-center py-12">
           <Brain className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Complete Lead Acquisition First</h3>
@@ -122,7 +122,7 @@ const EnhancedContentLibrary: React.FC = () => {
 
   return (
     <Card 
-      title="Enhanced Content Library" 
+      title="Script Library" 
       subtitle={`${totalSelected} of ${totalAvailable} items selected for ${prospect.companyName}`}
       className="mb-6"
     >
@@ -259,8 +259,9 @@ const EnhancedContentLibrary: React.FC = () => {
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h4 className="font-medium text-gray-900">{item.title}</h4>
+                                  {/* 1. Keywords - Large, Main Point */}
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <h4 className="font-medium text-gray-900 text-sm">{item.title}</h4>
                                     {item.successRate && (
                                       <div className="flex items-center gap-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                                         <BarChart3 className="w-3 h-3" />
@@ -269,27 +270,62 @@ const EnhancedContentLibrary: React.FC = () => {
                                     )}
                                   </div>
                                   
-                                  <p className="text-sm text-gray-700 mb-2">{item.content}</p>
-                                  
-                                  {item.context && (
-                                    <p className="text-xs text-gray-600 italic mb-2">
-                                      Context: {item.context}
-                                    </p>
-                                  )}
-
-                                  {item.tips && item.tips.length > 0 && (
-                                    <div className="mt-2">
-                                      <div className="text-xs font-medium text-gray-700 mb-1">💡 Tips:</div>
-                                      <ul className="text-xs text-gray-600 space-y-1">
-                                        {item.tips.map((tip, index) => (
-                                          <li key={index} className="flex items-start gap-1">
-                                            <span className="text-primary-500 mt-0.5">•</span>
-                                            <span>{tip}</span>
-                                          </li>
+                                  {(item as any).keywords && (item as any).keywords.length > 0 && (
+                                    <div className="mb-4">
+                                      <div className="flex flex-wrap gap-2">
+                                        {(item as any).keywords.map((keyword: string, index: number) => (
+                                          <span key={index} className="text-lg font-bold text-primary-700 bg-primary-50 px-3 py-1 rounded-lg border border-primary-200">
+                                            {keyword}
+                                          </span>
                                         ))}
-                                      </ul>
+                                      </div>
                                     </div>
                                   )}
+
+                                  {/* 2. Context - Large, Readable */}
+                                  {item.context && (
+                                    <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                                      <div className="text-sm font-semibold text-blue-900 mb-1">📋 Context & Strategy</div>
+                                      <p className="text-base text-blue-800 leading-relaxed">{item.context}</p>
+                                    </div>
+                                  )}
+
+                                  {/* 3. Full Script - Smaller */}
+                                  <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="text-xs font-semibold text-gray-700 mb-2">💬 Full Script</div>
+                                    <p className="text-sm text-gray-700 leading-relaxed italic">{item.content}</p>
+                                  </div>
+
+                                  {/* 4. Tips and What to Avoid */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {item.tips && item.tips.length > 0 && (
+                                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                        <div className="text-xs font-semibold text-green-800 mb-2">✅ Tips for Success</div>
+                                        <ul className="text-xs text-green-700 space-y-1">
+                                          {item.tips.map((tip, index) => (
+                                            <li key={index} className="flex items-start gap-1">
+                                              <span className="text-green-500 mt-0.5">•</span>
+                                              <span>{tip}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+
+                                    {(item as any).avoidSaying && (item as any).avoidSaying.length > 0 && (
+                                      <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                                        <div className="text-xs font-semibold text-red-800 mb-2">❌ Avoid Saying</div>
+                                        <ul className="text-xs text-red-700 space-y-1">
+                                          {(item as any).avoidSaying.map((avoid: string, index: number) => (
+                                            <li key={index} className="flex items-start gap-1">
+                                              <span className="text-red-500 mt-0.5">•</span>
+                                              <span>{avoid}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </motion.div>
@@ -317,7 +353,7 @@ const EnhancedContentLibrary: React.FC = () => {
                 {totalSelected} Item{totalSelected !== 1 ? 's' : ''} Selected
               </h4>
               <p className="text-sm text-primary-800">
-                Your selected content will appear in the battle card and be available during live calls
+                Your selected content will appear in the call card and be available during live calls
               </p>
             </div>
           </div>
@@ -327,4 +363,4 @@ const EnhancedContentLibrary: React.FC = () => {
   );
 };
 
-export default EnhancedContentLibrary;
+export default ScriptLibrary;
