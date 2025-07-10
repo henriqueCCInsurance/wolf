@@ -46,13 +46,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigateToAdmin }) => {
             <div className="flex items-center space-x-3">
               {/* Professional Wolf Logo */}
               <div className="relative">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2L15 9L22 10L17 14.5L19 22L12 18L5 22L7 14.5L2 10L9 9L12 2Z"/>
-                </svg>
-                </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                  <div className="w-full h-full bg-white rounded-full"></div>
+                <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                  <img 
+                    src="/wolf-icon.png" 
+                    alt="W.O.L.F Logo" 
+                    className="w-10 h-10 object-contain filter brightness-0 invert"
+                  />
                 </div>
               </div>
               <div>

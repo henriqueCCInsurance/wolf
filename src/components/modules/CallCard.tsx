@@ -615,6 +615,19 @@ const CallCard: React.FC = () => {
                     {item.context && (
                       <p className="text-xs text-gray-600 italic mt-1">{item.context}</p>
                     )}
+                    {item.source && (
+                      <p className="text-xs text-gray-500 mt-1">Source: {item.source}</p>
+                    )}
+                    {item.dataPoints && item.dataPoints.length > 0 && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {item.dataPoints.map((dp, idx) => (
+                          <span key={idx}>
+                            {dp.statistic}: {dp.value} ({dp.source}{dp.year ? `, ${dp.year}` : ''})
+                            {idx < item.dataPoints!.length - 1 && ' • '}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

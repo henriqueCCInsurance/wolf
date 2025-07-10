@@ -370,7 +370,12 @@ export const expandedContentLibrary: ContentItem[] = [
     type: 'objection-handler',
     persona: 'cost-conscious-employer',
     content: 'I hear you. With inflation affecting 13.5% of businesses as their top challenge, everyone\'s watching costs. That\'s why we focus on reducing your current spend by 15-20% while actually improving coverage. Can I show you examples from similar businesses?',
-    context: 'Uses inflation data to acknowledge cost concerns while promising savings'
+    context: 'Uses inflation data to acknowledge cost concerns while promising savings',
+    source: 'Statistics Canada Business Conditions Survey 2025',
+    dataPoints: [
+      { statistic: 'Inflation as top challenge', value: '13.5%', source: 'Statistics Canada', year: '2025' },
+      { statistic: 'Average savings', value: '15-20%', source: 'Campbell & Co. Client Analytics', year: '2024-2025' }
+    ]
   },
   {
     id: 'market-objection-cce',
@@ -492,14 +497,23 @@ export const expandedContentLibrary: ContentItem[] = [
     type: 'opener',
     persona: 'cost-conscious-employer',
     content: 'I\'m calling because inflation and rising input costs are squeezing margins for 25% of Canadian businesses. We\'re helping companies like yours reduce benefits costs by 15-30% while keeping employees happy. Is cost control a priority right now?',
-    context: 'Uses current inflation data (13.5% cite as #1 challenge)'
+    context: 'Uses current inflation data (13.5% cite as #1 challenge)',
+    source: 'Canadian Business Conditions Survey 2025',
+    dataPoints: [
+      { statistic: 'Inflation impact', value: '13.5%', source: 'Statistics Canada Business Survey', year: '2025' },
+      { statistic: 'Cost reduction', value: '15-30%', source: 'Campbell & Co. Client Results', year: '2024-2025' }
+    ]
   },
   {
     id: 'cce-opener-8',
     type: 'opener',
     persona: 'cost-conscious-employer',
     content: 'Quick question - are you struggling to find skilled workers? 9.2% of Canadian businesses say it\'s their top challenge. We help companies create benefits packages that actually attract talent without breaking the budget.',
-    context: 'Addresses skilled recruitment challenge with Canadian data'
+    context: 'Addresses skilled recruitment challenge with Canadian data',
+    source: 'Canadian Survey on Business Conditions Q1 2025',
+    dataPoints: [
+      { statistic: 'Skilled recruitment challenge', value: '9.2%', source: 'Statistics Canada', year: '2025' }
+    ]
   },
   {
     id: 'cce-opener-9',
@@ -564,7 +578,11 @@ export const expandedContentLibrary: ContentItem[] = [
     type: 'opener',
     persona: 'benefits-optimizer',
     content: 'With 42% of employees rating their mental health as fair or poor, HR leaders are scrambling for solutions. We help companies implement comprehensive wellness programs that actually work. Is mental health support a priority for your organization?',
-    context: 'Leading with mental health crisis statistics'
+    context: 'Leading with mental health crisis statistics',
+    source: 'Canadian Mental Health Index 2025',
+    dataPoints: [
+      { statistic: 'Poor mental health', value: '42%', source: 'LifeWorks Mental Health Index', year: '2025' }
+    ]
   },
   {
     id: 'bo-opener-8',
@@ -781,7 +799,12 @@ export const expandedContentLibrary: ContentItem[] = [
     type: 'opener',
     persona: 'strategic-ceo',
     content: 'I\'m calling because 99% of B2B purchases are driven by organizational change. As you transform [Company] to capture the 72% business optimism in Canada, aligning your benefits strategy is crucial. Can we discuss how benefits support your transformation goals?',
-    context: 'Links benefits to business transformation strategy'
+    context: 'Links benefits to business transformation strategy',
+    source: 'Gartner B2B Buying Journey Research 2025',
+    dataPoints: [
+      { statistic: 'B2B purchases driven by change', value: '99%', source: 'Gartner Research', year: '2025' },
+      { statistic: 'Business optimism', value: '72%', source: 'Canadian Business Outlook Survey', year: '2025' }
+    ]
   },
   {
     id: 'strategic-ceo-opener-2',

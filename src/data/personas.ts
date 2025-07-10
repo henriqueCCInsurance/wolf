@@ -7,10 +7,10 @@ export const personas: PersonaData[] = [
     description: 'Small Business Owner (10-75 employees)',
     profile: 'Founder or owner deeply invested in business success but resource-constrained, wearing multiple hats including HR and finance.',
     keyPressures: [
-      'Talent retention in competitive market - skilled recruitment cited as top challenge by 9.2% of Canadian businesses',
-      'Rising inflation (13.5% of businesses cite as #1 challenge) and input costs (12.1%) squeezing margins',
-      'Administrative burden - average benefits spending 15-30% of payroll ($4,500-$9,000 per employee)',
-      'Managing multi-generational workforce expectations - 65% of B2B buyers now Millennials/Gen Z'
+      'Talent retention in competitive market - skilled recruitment cited as top challenge by 9.2% of Canadian businesses (Statistics Canada, 2025)',
+      'Rising inflation (13.5% of businesses cite as #1 challenge) and input costs (12.1%) squeezing margins (Business Conditions Survey, 2025)',
+      'Administrative burden - average benefits spending 15-30% of payroll ($4,500-$9,000 per employee) (Canadian Employer Benefits Survey, 2025)',
+      'Managing multi-generational workforce expectations - 65% of B2B buyers now Millennials/Gen Z (LinkedIn B2B Institute, 2025)'
     ],
     language: [
       'Headcount',

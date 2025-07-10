@@ -44,6 +44,13 @@ export interface ContentItem {
   persona: PersonaType;
   content: string;
   context?: string;
+  source?: string; // Optional for backward compatibility
+  dataPoints?: {
+    statistic: string;
+    value: string;
+    source: string;
+    year?: string;
+  }[];
 }
 
 export interface CallLog {
