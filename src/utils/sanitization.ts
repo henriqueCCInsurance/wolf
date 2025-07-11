@@ -131,7 +131,7 @@ export const sanitizeFormData = <T extends Record<string, any>>(
 
 // React hook for form sanitization
 export const useSanitizedForm = <T extends Record<string, any>>(
-  initialData: T,
+  _initialData: T,
   fieldTypes: Partial<Record<keyof T, 'text' | 'email' | 'phone' | 'name' | 'multiline' | 'url'>>
 ) => {
   const sanitizeField = (fieldName: keyof T, value: string): string => {

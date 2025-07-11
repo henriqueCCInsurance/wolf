@@ -19,10 +19,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { trackCallCardCreated } from '@/services/activityTracking';
 import { SuccessPredictionService } from '@/services/successPrediction';
 import { SuccessPredictionDisplay } from '@/components/common/SuccessPredictionDisplay';
+import { generateCallCardPDF, generatePDFFilename } from '@/utils/pdfGenerator';
+import { useToast } from '@/components/common/Toast';
 
 const CallCard: React.FC = () => {
   const { prospect, selectedContent, setCurrentModule, addCallCard, setProspect, activeSequenceId, callSequences, callLogs } = useAppStore();
   const { user } = useAuth();
+  const toast = useToast();
   const [lockedContacts, setLockedContacts] = useState<Contact[]>([]);
   const [currentContactIndex, setCurrentContactIndex] = useState(0);
   const [isMultiContactMode, setIsMultiContactMode] = useState(false);
@@ -221,34 +224,43 @@ const CallCard: React.FC = () => {
   };
 
   const handleGeneratePDF = () => {
-    // Create call guide data
-    const callGuide = {
-      lead: currentProspect, // Updated to use current prospect (could be from locked contacts)
-      selectedContent,
-      dynamicIntelligence: [], // Will be populated when web search is implemented
-      generatedAt: new Date()
-    };
-    
-    // Add call card to store and database
-    addCallCard(callGuide);
-    
-    // Track activity
-    if (user) {
-      trackCallCardCreated(user, {
-        companyName: currentProspect.companyName,
-        contactName: currentProspect.contactName,
-        industry: currentProspect.industry
+    try {
+      // Create call guide data
+      const callGuide = {
+        lead: currentProspect, // Updated to use current prospect (could be from locked contacts)
+        selectedContent,
+        dynamicIntelligence: [], // Will be populated when web search is implemented
+        generatedAt: new Date()
+      };
+      
+      // Add call card to store and database
+      addCallCard(callGuide);
+      
+      // Track activity
+      if (user) {
+        trackCallCardCreated(user, {
+          companyName: currentProspect.companyName,
+          contactName: currentProspect.contactName,
+          industry: currentProspect.industry
+        });
+      }
+      
+      // Generate PDF
+      const pdf = generateCallCardPDF({
+        prospect: currentProspect,
+        selectedContent,
+        successPrediction: successPrediction || undefined
       });
+      
+      // Download PDF
+      const filename = generatePDFFilename(currentProspect);
+      pdf.save(filename);
+      
+      toast.success('PDF Generated', `Your call card has been downloaded as ${filename}`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('PDF Generation Failed', 'Please try using the print option instead.');
     }
-    
-    // If we have a contact ID, update the call card in database
-    if (isMultiContactMode && lockedContacts[currentContactIndex]?.id) {
-      // The addCallCard function in store already handles database save
-    }
-    
-    // For now, just trigger print dialog
-    // TODO: Implement PDF generation with jsPDF
-    handlePrint();
   };
 
   return (

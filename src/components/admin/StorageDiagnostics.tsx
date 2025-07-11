@@ -14,8 +14,8 @@ const StorageDiagnostics: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [testResults, setTestResults] = useState<string[]>([]);
 
-  const loadStorageInfo = () => {
-    const info = localStorageService.getStorageInfo();
+  const loadStorageInfo = async () => {
+    const info = await localStorageService.getStorageInfo();
     setStorageInfo(info);
   };
 
@@ -58,7 +58,7 @@ const StorageDiagnostics: React.FC = () => {
 
     // Test 3: Validate stored data
     try {
-      const data = localStorageService.loadState();
+      const data = await localStorageService.loadState();
       if (data) {
         results.push('✅ Stored data is valid and loadable');
         

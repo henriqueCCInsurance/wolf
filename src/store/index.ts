@@ -325,11 +325,11 @@ export const useAppStore = create<AppState>()(
       name: 'wolf-den-storage',
       storage: {
         getItem: async () => {
-          const data = localStorageService.loadState();
+          const data = await localStorageService.loadState();
           return data ? { state: data } : null;
         },
         setItem: async (_, value) => {
-          localStorageService.saveState(value.state);
+          await localStorageService.saveState(value.state);
         },
         removeItem: async () => {
           localStorageService.clearAll();

@@ -1,4 +1,9 @@
-import * as XLSX from 'xlsx';
+// Removed vulnerable xlsx dependency
+import { 
+  exportCallLogsToExcel as secureExportCallLogs,
+  exportBattleCardsToExcel as secureExportBattleCards,
+  exportPerformanceSummaryToExcel as secureExportPerformance
+} from './secureExcelExport';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import { CallLog, CallCard } from '@/types';
@@ -37,49 +42,43 @@ export const exportToExcel = async (
   dataType: 'calls' | 'battlecards' | 'analytics' | 'complete',
   filename: string
 ) => {
-  const wb = XLSX.utils.book_new();
+  // Use secure Excel export functions instead of vulnerable xlsx
+  const timestamp = format(new Date(), 'yyyy-MM-dd');
   
-  // Set workbook properties
-  wb.Props = {
-    Title: "W.O.L.F. Den Export",
-    Subject: "Sales Performance Data",
-    Author: "Campbell & Co. Group Benefits",
-    Company: "Campbell & Co.",
-    CreatedDate: new Date()
-  };
-
   switch (dataType) {
     case 'calls':
-      addCallLogsSheet(wb, data.callLogs || []);
-      addPerformanceSheet(wb, data.callLogs || []);
+      if (data.callLogs) {
+        secureExportCallLogs(data.callLogs, `${filename}-calls-${timestamp}`);
+      }
       break;
       
     case 'battlecards':
-      addBattleCardsSheet(wb, data.battleCards || []);
+      if (data.battleCards) {
+        secureExportBattleCards(data.battleCards, `${filename}-battlecards-${timestamp}`);
+      }
       break;
       
     case 'analytics':
-      addAnalyticsSheets(wb, data);
-      break;
-      
     case 'complete':
-      // Add all sheets for complete export
-      if (data.callLogs) addCallLogsSheet(wb, data.callLogs);
-      if (data.battleCards) addBattleCardsSheet(wb, data.battleCards);
-      if (data.callLogs) addPerformanceSheet(wb, data.callLogs);
-      if (data.analytics) addAnalyticsSheets(wb, data);
-      addSummarySheet(wb, data);
+      // For analytics and complete exports, export multiple files
+      if (data.callLogs) {
+        secureExportCallLogs(data.callLogs, `${filename}-calls-${timestamp}`);
+      }
+      if (data.battleCards) {
+        secureExportBattleCards(data.battleCards, `${filename}-battlecards-${timestamp}`);
+      }
+      if (data.callLogs && data.battleCards) {
+        secureExportPerformance(data.callLogs, data.battleCards, `${filename}-summary-${timestamp}`);
+      }
       break;
   }
-
-  // Generate Excel file
-  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  downloadFile(blob, `${filename}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
 };
 
+/* XLSX-dependent functions temporarily disabled due to security vulnerability
+   These functions need to be rewritten without the vulnerable xlsx package
+   
 // Add Call Logs Sheet
-const addCallLogsSheet = (wb: XLSX.WorkBook, callLogs: CallLog[]) => {
+const addCallLogsSheet = (wb: any, callLogs: CallLog[]) => {
   const data = callLogs.map(log => ({
     'Date': format(new Date(log.createdAt), 'yyyy-MM-dd'),
     'Time': format(new Date(log.createdAt), 'HH:mm:ss'),
@@ -274,6 +273,8 @@ const addSummarySheet = (wb: XLSX.WorkBook, data: any) => {
 
   XLSX.utils.book_append_sheet(wb, ws, "Summary", true); // Add as first sheet
 };
+
+*/
 
 // PDF Export Functions
 export const exportToPDF = async (
@@ -640,15 +641,6 @@ const getDateRange = (callLogs: CallLog[]): string => {
   return `${format(minDate, 'MMM dd, yyyy')} - ${format(maxDate, 'MMM dd, yyyy')}`;
 };
 
-const getSuccessRate = (callLogs: CallLog[]): string => {
-  if (callLogs.length === 0) return '0%';
-  
-  const successful = callLogs.filter(log => 
-    log.outcome === 'meeting-booked' || log.outcome === 'follow-up'
-  ).length;
-  
-  return `${((successful / callLogs.length) * 100).toFixed(1)}%`;
-};
 
 const generateInsights = (data: any): string[] => {
   const insights: string[] = [];

@@ -1,7 +1,6 @@
 import { userService } from '@/services/netlifyDb';
 import { User, LoginCredentials } from '@/types';
 import { hashPassword, verifyPassword, generateSecureToken, generateCSRFToken, storeCSRFToken, validatePasswordStrength } from '@/utils/crypto';
-import * as bcrypt from 'bcryptjs';
 
 // Beta access codes for early testers
 const BETA_ACCESS_CODES = [
@@ -144,7 +143,7 @@ class AuthService {
           });
         }
       } catch (dbError) {
-        console.warn('Database unavailable, using demo user:', dbError);
+        // Database unavailable, using demo user fallback
         // Fallback to demo user if database is unavailable
         user = {
           id: `demo-${Date.now()}`,
@@ -257,7 +256,7 @@ class AuthService {
         throw error;
       }
       
-      console.warn('Database unavailable for signup:', error);
+      // Database unavailable for signup, using localStorage fallback
       
       // Enhanced fallback for beta users
       const user: User = {
@@ -411,7 +410,7 @@ class AuthService {
       const users = await userService.findByEmail('') || [];
       return users;
     } catch (error) {
-      console.warn('Database unavailable, returning demo users:', error);
+      // Database unavailable, returning demo users
       // Fallback to demo users
       return this.demoUsers.map(demoUser => ({
         id: `demo-${demoUser.email}`,
@@ -437,7 +436,7 @@ class AuthService {
     try {
       return await userService.create(userData);
     } catch (error) {
-      console.warn('Database unavailable for user creation:', error);
+      // Database unavailable for user creation
       throw new Error('User creation unavailable');
     }
   }
@@ -451,7 +450,7 @@ class AuthService {
 
   async resetPassword(email: string): Promise<void> {
     // In a real app, this would send a password reset email
-    console.log('Password reset requested for:', email);
+    // Password reset requested
     
     // Check if email exists in demo users or stored users
     const storedUsers = JSON.parse(localStorage.getItem('wolf-den-users') || '[]');
@@ -472,7 +471,7 @@ class AuthService {
       throw new Error('Not authenticated');
     }
     // In demo mode, just log the password change
-    console.log('Password update requested for:', this.currentUser.email);
+    // Password update requested
   }
 
   // OAuth methods for compatibility (not functional in demo mode)

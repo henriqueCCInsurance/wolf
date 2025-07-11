@@ -3,6 +3,14 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { EnhancedWebSearchService } from './services/enhancedWebSearch'
+import { runSecurityMigrations } from './utils/securityMigration'
+
+// Run security migrations before app starts
+runSecurityMigrations().then(() => {
+  console.log('Security migrations completed');
+}).catch(error => {
+  console.error('Security migrations failed:', error);
+});
 
 // Initialize search service
 EnhancedWebSearchService.initialize();

@@ -13,7 +13,7 @@ import { industries } from '@/data/industries';
 import { PersonaType } from '@/types';
 import { EnhancedWebSearchService } from '@/services/enhancedWebSearch';
 import { CompanyIntelligenceService } from '@/services/companyIntelligence';
-import { sanitizeName, sanitizeFormData } from '@/utils/sanitization';
+import { sanitizeFormData } from '@/utils/sanitization';
 
 const HuntPlanner: React.FC = () => {
   const { 

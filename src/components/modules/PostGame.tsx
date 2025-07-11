@@ -192,7 +192,7 @@ const PostGame: React.FC = () => {
     };
     
     try {
-      await addCallLog(callLog);
+      await addCallLog(callLog, user?.id);
       
       // Track activity based on outcome
       if (user) {

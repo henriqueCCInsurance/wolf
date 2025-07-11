@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SecureStorage } from '@/utils/secureStorage';
 
 // Schema version for migration support
 const SCHEMA_VERSION = 1;
@@ -96,12 +97,11 @@ class LocalStorageService {
   /**
    * Load and validate data from localStorage
    */
-  loadState(): PersistedState | null {
+  async loadState(): Promise<PersistedState | null> {
     try {
-      const rawData = localStorage.getItem(this.storageKey);
-      if (!rawData) return null;
-
-      const parsed = JSON.parse(rawData);
+      // Try to load from secure storage first
+      const parsed = await SecureStorage.getItem<any>(this.storageKey);
+      if (!parsed) return null;
       
       // Handle migration if needed
       const migrated = this.migrateData(parsed);
@@ -134,7 +134,7 @@ class LocalStorageService {
   /**
    * Save validated data to localStorage
    */
-  saveState(data: PersistedState): void {
+  async saveState(data: PersistedState): Promise<void> {
     try {
       // Ensure we have a version
       const dataWithVersion = {
@@ -148,7 +148,7 @@ class LocalStorageService {
       // Validate before saving
       const validated = StorageSchema.parse(cleaned);
       
-      localStorage.setItem(this.storageKey, JSON.stringify(validated));
+      await SecureStorage.setItem(this.storageKey, validated);
     } catch (error) {
       console.error('Failed to save state to localStorage:', error);
       
@@ -161,7 +161,7 @@ class LocalStorageService {
    * Clear all persisted data
    */
   clearAll(): void {
-    localStorage.removeItem(this.storageKey);
+    SecureStorage.removeItem(this.storageKey);
   }
 
   /**
@@ -238,8 +238,9 @@ class LocalStorageService {
   /**
    * Attempt to recover partial data if full validation fails
    */
-  private attemptPartialRecovery(): PersistedState | null {
+  private async attemptPartialRecovery(): Promise<PersistedState | null> {
     try {
+      // Try legacy localStorage first for recovery
       const rawData = localStorage.getItem(this.storageKey);
       if (!rawData) return null;
 
@@ -287,7 +288,7 @@ class LocalStorageService {
   /**
    * Attempt to save only critical data if full save fails
    */
-  private attemptCriticalSave(data: PersistedState): void {
+  private async attemptCriticalSave(data: PersistedState): Promise<void> {
     try {
       const critical = {
         version: SCHEMA_VERSION,
@@ -295,7 +296,7 @@ class LocalStorageService {
         callCards: data.callCards || []
       };
       
-      localStorage.setItem(this.storageKey, JSON.stringify(critical));
+      await SecureStorage.setItem(this.storageKey, critical);
       console.warn('Critical data saved successfully');
     } catch (error) {
       console.error('Failed to save even critical data:', error);
@@ -305,14 +306,16 @@ class LocalStorageService {
   /**
    * Get storage size info for monitoring
    */
-  getStorageInfo(): {
+  async getStorageInfo(): Promise<{
     sizeInBytes: number;
     sizeInKB: number;
     itemCounts: Record<string, number>;
-  } {
+  }> {
     try {
-      const data = localStorage.getItem(this.storageKey);
-      if (!data) return { sizeInBytes: 0, sizeInKB: 0, itemCounts: {} };
+      const stored = await SecureStorage.getItem<any>(this.storageKey);
+      if (!stored) return { sizeInBytes: 0, sizeInKB: 0, itemCounts: {} };
+      
+      const data = JSON.stringify(stored);
       
       const sizeInBytes = new Blob([data]).size;
       const parsed = JSON.parse(data);

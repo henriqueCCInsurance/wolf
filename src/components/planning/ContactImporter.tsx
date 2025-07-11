@@ -10,6 +10,7 @@ import { NetlifyDatabaseService } from '@/services/netlifyDb';
 import { CompanyIntelligenceService } from '@/services/companyIntelligence';
 import { zohoCRMService, ZohoFieldMapping } from '@/services/zohoCRM';
 import ZohoFieldMapper from '@/components/crm/ZohoFieldMapper';
+import { validateFile, validateCSVData, validateName, validateEmail, validatePhone } from '@/utils/inputValidation';
 
 interface ContactImporterProps {
   isOpen: boolean;
@@ -60,8 +61,11 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
-    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
-      setErrors(['Please select a CSV file']);
+    // Validate file type and size
+    const validation = validateFile(selectedFile, ['csv', 'text/csv'], 50); // 50MB max
+    
+    if (!validation.isValid) {
+      setErrors([validation.error || 'Invalid file']);
       return;
     }
 
@@ -102,6 +106,15 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
           return;
         }
 
+        // Validate and sanitize CSV data
+        const csvValidation = validateCSVData(results.data as string[][], 10000);
+        
+        if (!csvValidation.isValid) {
+          setErrors(csvValidation.errors);
+          setIsProcessing(false);
+          return;
+        }
+        
         const validData = (results.data as CSVRow[]).filter(row => 
           Object.values(row).some(value => value && value.trim())
         );
@@ -181,24 +194,60 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
 
   const processContacts = (): Contact[] => {
     let contactsWithoutPhone = 0;
+    const validationErrors: string[] = [];
     
     const contacts = csvData.slice(0, 100).map((row, index) => { // Limit to 100 contacts
-      const phone = mappings.phone ? row[mappings.phone]?.trim() : undefined;
+      // Validate and sanitize company name
+      const companyNameValidation = validateName(
+        mappings.companyName ? row[mappings.companyName]?.trim() || '' : '',
+        2, 100
+      );
+      if (!companyNameValidation.isValid && companyNameValidation.error) {
+        validationErrors.push(`Row ${index + 1}: Company - ${companyNameValidation.error}`);
+      }
       
-      // Check for missing or invalid phone
-      if (!phone || phone === '') {
+      // Validate and sanitize contact name
+      const contactNameValidation = validateName(
+        mappings.contactName ? row[mappings.contactName]?.trim() || '' : '',
+        2, 100
+      );
+      if (!contactNameValidation.isValid && contactNameValidation.error) {
+        validationErrors.push(`Row ${index + 1}: Contact - ${contactNameValidation.error}`);
+      }
+      
+      // Validate email if provided
+      let sanitizedEmail: string | undefined;
+      if (mappings.email && row[mappings.email]) {
+        const emailValidation = validateEmail(row[mappings.email].trim());
+        if (emailValidation.isValid) {
+          sanitizedEmail = emailValidation.sanitized;
+        } else {
+          validationErrors.push(`Row ${index + 1}: Invalid email address`);
+        }
+      }
+      
+      // Validate phone if provided
+      let sanitizedPhone: string | undefined;
+      if (mappings.phone && row[mappings.phone]) {
+        const phoneValidation = validatePhone(row[mappings.phone].trim());
+        if (phoneValidation.isValid) {
+          sanitizedPhone = phoneValidation.sanitized;
+        } else {
+          contactsWithoutPhone++;
+        }
+      } else {
         contactsWithoutPhone++;
       }
       
       return {
         id: `import-${Date.now()}-${index}`,
-        companyName: mappings.companyName ? row[mappings.companyName]?.trim() || '' : '',
-        contactName: mappings.contactName ? row[mappings.contactName]?.trim() || '' : '',
+        companyName: companyNameValidation.sanitized,
+        contactName: contactNameValidation.sanitized,
         industry: mappings.industry ? row[mappings.industry]?.trim() || '' : '',
         position: mappings.position ? row[mappings.position]?.trim() : undefined,
         title: mappings.position ? row[mappings.position]?.trim() : undefined,
-        email: mappings.email ? row[mappings.email]?.trim() : undefined,
-        phone: phone,
+        email: sanitizedEmail,
+        phone: sanitizedPhone,
         address: mappings.address ? row[mappings.address]?.trim() : undefined,
         employeeCount: mappings.employeeCount ? row[mappings.employeeCount]?.trim() : undefined,
         revenue: mappings.revenue ? row[mappings.revenue]?.trim() : undefined,
