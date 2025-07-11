@@ -39,9 +39,6 @@ const CallCard: React.FC = () => {
         if (activeSequenceId) {
           const sequence = callSequences.find(seq => seq.id === activeSequenceId);
           if (sequence) {
-            // TODO: Get userId from authentication context
-            // const userId = 'current-user';
-            
             // Load contacts from database if they have IDs
             if (sequence.contactIds && sequence.contactIds.length > 0) {
               const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
@@ -267,19 +264,19 @@ const CallCard: React.FC = () => {
         <div className="flex space-x-3">
           <Button onClick={() => setCurrentModule('call-planner')} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Planner
+            Planner
           </Button>
           <Button onClick={() => setCurrentModule('live-call')} className="bg-green-600 hover:bg-green-700">
             <Phone className="w-4 h-4 mr-2" />
-            Start Call
+            Call
           </Button>
           <Button onClick={handlePrint} variant="secondary">
             <Printer className="w-4 h-4 mr-2" />
-            Print Guide
+            Print
           </Button>
           <Button onClick={handleGeneratePDF}>
             <Download className="w-4 h-4 mr-2" />
-            Generate PDF
+            PDF
           </Button>
         </div>
       </div>

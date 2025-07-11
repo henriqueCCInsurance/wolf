@@ -1,4 +1,4 @@
-import { CallLog, BattleCard, CallSequence, PersonaType } from '@/types';
+import { CallLog, CallCard, CallSequence, PersonaType } from '@/types';
 
 export interface RevenueMetrics {
   totalPotential: number;
@@ -76,7 +76,7 @@ const DEFAULT_DEAL_SIZES: Record<PersonaType, number> = {
 // Revenue calculation utilities
 export const calculateRevenueMetrics = (
   callLogs: CallLog[],
-  battleCards: BattleCard[],
+  battleCards: CallCard[],
   _callSequences: CallSequence[]
 ): RevenueMetrics => {
   const meetingBookedLogs = callLogs.filter(log => log.outcome === 'meeting-booked');
@@ -258,7 +258,7 @@ export const calculateSuccessRateMetrics = (callLogs: CallLog[]): SuccessRateMet
 // Persona performance analysis
 export const calculatePersonaPerformance = (
   callLogs: CallLog[],
-  battleCards: BattleCard[]
+  battleCards: CallCard[]
 ): PersonaPerformanceMetrics[] => {
   const personas: PersonaType[] = ['roi-focused-executive', 'benefits-optimizer', 'cost-conscious-employer', 'gatekeeper'];
   
@@ -298,7 +298,7 @@ export const calculatePersonaPerformance = (
 // Generate actionable insights
 export const generateDashboardInsights = (
   callLogs: CallLog[],
-  _battleCards: BattleCard[],
+  _battleCards: CallCard[],
   revenueMetrics: RevenueMetrics,
   successMetrics: SuccessRateMetrics,
   personaMetrics: PersonaPerformanceMetrics[]

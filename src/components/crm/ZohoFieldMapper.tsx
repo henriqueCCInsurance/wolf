@@ -48,12 +48,6 @@ const ZohoFieldMapper: React.FC<ZohoFieldMapperProps> = ({
     { key: 'address', label: 'Address', required: false },
   ];
 
-  useEffect(() => {
-    if (isOpen) {
-      loadZohoFields();
-    }
-  }, [isOpen]);
-
   const loadZohoFields = async () => {
     setLoading(true);
     try {
@@ -63,9 +57,17 @@ const ZohoFieldMapper: React.FC<ZohoFieldMapperProps> = ({
       console.error('Error loading Zoho fields:', error);
       // Use mock fields for demo
       setZohoFields(getMockZohoFields());
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadZohoFields();
+    }
+  }, [isOpen]);
+
 
   const getMockZohoFields = (): ZohoField[] => {
     return [

@@ -1,5 +1,7 @@
 import { userService } from '@/services/netlifyDb';
 import { User, LoginCredentials } from '@/types';
+import { hashPassword, verifyPassword, generateSecureToken, generateCSRFToken, storeCSRFToken, validatePasswordStrength } from '@/utils/crypto';
+import * as bcrypt from 'bcryptjs';
 
 // Beta access codes for early testers
 const BETA_ACCESS_CODES = [
@@ -15,23 +17,77 @@ class AuthService {
   private currentUser: User | null = null;
   private authListeners: Array<(user: User | null) => void> = [];
 
-  // Demo users for testing
+  // Demo users for testing - passwords will be hashed on first use
   private demoUsers = [
-    { email: 'admin@campbellco.com', password: 'password123', name: 'Admin User', role: 'admin' as const },
-    { email: 'john.smith@campbellco.com', password: 'password123', name: 'John Smith', role: 'salesperson' as const },
-    { email: 'maria.garcia@campbellco.com', password: 'password123', name: 'Maria Garcia', role: 'salesperson' as const },
-    { email: 'demo@example.com', password: 'demo', name: 'Demo User', role: 'salesperson' as const }
+    { email: 'admin@campbellco.com', password: 'Admin@Demo2025!', name: 'Admin User', role: 'admin' as const },
+    { email: 'john.smith@campbellco.com', password: 'JohnSmith@2025!', name: 'John Smith', role: 'salesperson' as const },
+    { email: 'maria.garcia@campbellco.com', password: 'MariaGarcia@2025!', name: 'Maria Garcia', role: 'salesperson' as const },
+    { email: 'demo@example.com', password: 'DemoUser@2025!', name: 'Demo User', role: 'salesperson' as const }
   ];
+  
+  // Track failed login attempts
+  private failedAttempts: Map<string, { count: number; lastAttempt: Date }> = new Map();
+  private readonly MAX_FAILED_ATTEMPTS = 5;
+  private readonly LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 
   async login(credentials: LoginCredentials): Promise<User> {
+    // Check for account lockout
+    const lockoutInfo = this.failedAttempts.get(credentials.email);
+    if (lockoutInfo && lockoutInfo.count >= this.MAX_FAILED_ATTEMPTS) {
+      const timeSinceLastAttempt = Date.now() - lockoutInfo.lastAttempt.getTime();
+      if (timeSinceLastAttempt < this.LOCKOUT_DURATION) {
+        const remainingTime = Math.ceil((this.LOCKOUT_DURATION - timeSinceLastAttempt) / 60000);
+        throw new Error(`Account locked due to too many failed attempts. Try again in ${remainingTime} minutes.`);
+      } else {
+        // Reset failed attempts after lockout period
+        this.failedAttempts.delete(credentials.email);
+      }
+    }
+    
+    // Generate and store CSRF token
+    const csrfToken = generateCSRFToken();
+    storeCSRFToken(csrfToken);
+    
     // Check stored beta users first
     const storedUsers = JSON.parse(localStorage.getItem('wolf-den-users') || '[]');
-    const storedUser = storedUsers.find((user: any) => 
-      user.email === credentials.email && user.password === btoa(credentials.password)
-    );
+    // Find user by email first
+    const storedUser = storedUsers.find((user: any) => user.email === credentials.email);
     
+    // Then verify password
     if (storedUser) {
-      // Create user object from stored credentials
+      let isValidPassword = false;
+      
+      // Handle migration from btoa to proper hashing
+      if (storedUser.password.includes(':')) {
+        // Already hashed with our new system
+        isValidPassword = await verifyPassword(credentials.password, storedUser.password);
+      } else if (storedUser.password === btoa(credentials.password)) {
+        // Legacy btoa password - migrate to secure hash
+        isValidPassword = true;
+        const hashedPassword = await hashPassword(credentials.password);
+        
+        // Update stored users with new hash
+        const updatedUsers = storedUsers.map((u: any) => 
+          u.email === storedUser.email ? { ...u, password: hashedPassword } : u
+        );
+        localStorage.setItem('wolf-den-users', JSON.stringify(updatedUsers));
+        storedUser.password = hashedPassword;
+      }
+      
+      if (!isValidPassword) {
+        // Track failed login attempt
+        const attempts = this.failedAttempts.get(credentials.email) || { count: 0, lastAttempt: new Date() };
+        attempts.count++;
+        attempts.lastAttempt = new Date();
+        this.failedAttempts.set(credentials.email, attempts);
+        
+        throw new Error('Invalid credentials');
+      }
+      
+      // Reset failed attempts on successful login
+      this.failedAttempts.delete(credentials.email);
+      
+      // User found and password verified, create user object
       const user: User = {
         id: `beta-${storedUser.email}`,
         email: storedUser.email,
@@ -46,17 +102,31 @@ class AuthService {
         }
       };
       
+      // Generate session token
+      const sessionToken = generateSecureToken();
+      
       this.currentUser = user;
       this.notifyAuthListeners(user);
-      localStorage.setItem('wolf-den-user', JSON.stringify(user));
+      
+      // Store user with session token instead of full object
+      sessionStorage.setItem('wolf-den-session', JSON.stringify({
+        userId: user.id,
+        token: sessionToken,
+        csrfToken,
+        expiresAt: Date.now() + (8 * 60 * 60 * 1000) // 8 hours
+      }));
       
       return user;
     }
     
     // Check demo users as fallback
-    const demoUser = this.demoUsers.find(user => 
-      user.email === credentials.email && user.password === credentials.password
-    );
+    let demoUser = null;
+    for (const demo of this.demoUsers) {
+      if (demo.email === credentials.email && demo.password === credentials.password) {
+        demoUser = demo;
+        break;
+      }
+    }
 
     if (demoUser) {
       // Create or get user from database
@@ -91,22 +161,41 @@ class AuthService {
         };
       }
 
+      // Reset failed attempts on successful login
+      this.failedAttempts.delete(credentials.email);
+      
       this.currentUser = user;
       this.notifyAuthListeners(user);
       
-      // Store in localStorage for persistence
-      localStorage.setItem('wolf-den-user', JSON.stringify(user));
+      // Generate session token
+      const sessionToken = generateSecureToken();
+      
+      // Store session info instead of full user object
+      sessionStorage.setItem('wolf-den-session', JSON.stringify({
+        userId: user.id,
+        token: sessionToken,
+        csrfToken,
+        expiresAt: Date.now() + (8 * 60 * 60 * 1000) // 8 hours
+      }));
       
       return user;
     }
 
+    // Track failed login attempt
+    const attempts = this.failedAttempts.get(credentials.email) || { count: 0, lastAttempt: new Date() };
+    attempts.count++;
+    attempts.lastAttempt = new Date();
+    this.failedAttempts.set(credentials.email, attempts);
+    
     throw new Error('Invalid credentials');
   }
 
   async signUp(email: string, password: string, name: string, role: 'salesperson' | 'admin' = 'salesperson', betaCode?: string): Promise<User> {
     // Validate password strength
-    if (password.length < 8) {
-      throw new Error('Password must be at least 8 characters long');
+    const passwordValidation = validatePasswordStrength(password);
+    
+    if (!passwordValidation.isValid) {
+      throw new Error(`Password validation failed: ${passwordValidation.errors.join(', ')}`);
     }
     
     // Validate beta access code if provided
@@ -121,8 +210,8 @@ class AuthService {
         throw new Error('An account with this email already exists');
       }
 
-      // Create new user with hashed password (in production, use bcrypt)
-      const hashedPassword = btoa(password); // Simple encoding for demo
+      // Create new user with properly hashed password
+      const hashedPassword = await hashPassword(password);
       
       const user = await userService.create({
         email,
@@ -145,10 +234,22 @@ class AuthService {
       existingUsers.push(userCredentials);
       localStorage.setItem('wolf-den-users', JSON.stringify(existingUsers));
 
+      // Generate session token and CSRF token
+      const sessionToken = generateSecureToken();
+      const csrfToken = generateCSRFToken();
+      storeCSRFToken(csrfToken);
+      
       // Log the user in automatically
       this.currentUser = user;
       this.notifyAuthListeners(user);
-      localStorage.setItem('wolf-den-user', JSON.stringify(user));
+      
+      // Store session info
+      sessionStorage.setItem('wolf-den-session', JSON.stringify({
+        userId: user.id,
+        token: sessionToken,
+        csrfToken,
+        expiresAt: Date.now() + (8 * 60 * 60 * 1000) // 8 hours
+      }));
 
       return user;
     } catch (error) {
@@ -174,7 +275,7 @@ class AuthService {
       };
 
       // Store credentials for future login
-      const hashedPassword = btoa(password);
+      const hashedPassword = await hashPassword(password);
       const userCredentials = {
         email,
         password: hashedPassword,
@@ -188,10 +289,22 @@ class AuthService {
       existingUsers.push(userCredentials);
       localStorage.setItem('wolf-den-users', JSON.stringify(existingUsers));
       
+      // Generate session token and CSRF token
+      const sessionToken = generateSecureToken();
+      const csrfToken = generateCSRFToken();
+      storeCSRFToken(csrfToken);
+      
       // Log the user in
       this.currentUser = user;
       this.notifyAuthListeners(user);
-      localStorage.setItem('wolf-den-user', JSON.stringify(user));
+      
+      // Store session info
+      sessionStorage.setItem('wolf-den-session', JSON.stringify({
+        userId: user.id,
+        token: sessionToken,
+        csrfToken,
+        expiresAt: Date.now() + (8 * 60 * 60 * 1000) // 8 hours
+      }));
       
       return user;
     }
@@ -199,7 +312,8 @@ class AuthService {
 
   async logout(): Promise<void> {
     this.currentUser = null;
-    localStorage.removeItem('wolf-den-user');
+    sessionStorage.removeItem('wolf-den-session');
+    sessionStorage.removeItem('wolf-den-csrf-token');
     this.notifyAuthListeners(null);
   }
 
@@ -208,16 +322,45 @@ class AuthService {
       return this.currentUser;
     }
 
-    // Check localStorage for persisted user
-    const storedUser = localStorage.getItem('wolf-den-user');
-    if (storedUser) {
+    // Check session storage for active session
+    const sessionData = sessionStorage.getItem('wolf-den-session');
+    if (sessionData) {
       try {
-        const user = JSON.parse(storedUser);
-        this.currentUser = user;
-        return user;
+        const session = JSON.parse(sessionData);
+        
+        // Check if session is expired
+        if (session.expiresAt < Date.now()) {
+          sessionStorage.removeItem('wolf-den-session');
+          sessionStorage.removeItem('wolf-den-csrf-token');
+          return null;
+        }
+        
+        // Retrieve user from stored users or database
+        const storedUsers = JSON.parse(localStorage.getItem('wolf-den-users') || '[]');
+        const userData = storedUsers.find((u: any) => `beta-${u.email}` === session.userId);
+        
+        if (userData) {
+          const user: User = {
+            id: session.userId,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role || 'salesperson',
+            createdAt: userData.createdAt ? new Date(userData.createdAt) : new Date(),
+            settings: {
+              theme: 'light' as const,
+              notifications: true,
+              autoSave: true,
+              defaultCallObjectives: []
+            }
+          };
+          
+          this.currentUser = user;
+          return user;
+        }
       } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('wolf-den-user');
+        console.error('Error parsing session data:', error);
+        sessionStorage.removeItem('wolf-den-session');
+        sessionStorage.removeItem('wolf-den-csrf-token');
       }
     }
 
@@ -241,7 +384,18 @@ class AuthService {
       } 
     };
     this.currentUser = updatedUser;
-    localStorage.setItem('wolf-den-user', JSON.stringify(updatedUser));
+    
+    // Update user in stored users
+    const storedUsers = JSON.parse(localStorage.getItem('wolf-den-users') || '[]');
+    const userIndex = storedUsers.findIndex((u: any) => `beta-${u.email}` === updatedUser.id);
+    if (userIndex >= 0) {
+      storedUsers[userIndex] = {
+        ...storedUsers[userIndex],
+        settings: updatedUser.settings
+      };
+      localStorage.setItem('wolf-den-users', JSON.stringify(storedUsers));
+    }
+    
     this.notifyAuthListeners(updatedUser);
     
     return updatedUser;

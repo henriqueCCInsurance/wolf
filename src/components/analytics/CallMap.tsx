@@ -140,33 +140,48 @@ const CallMap: React.FC<CallMapProps> = ({ callLogs }) => {
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   
   // Mock geocoding function - in production, this would use a real geocoding API
-  const geocodeAddress = (_companyName: string, index: number): { coordinates: LatLngExpression; address: string } => {
-    // Mock locations across different US regions
+  const geocodeAddress = (companyName: string, address?: string): { coordinates: LatLngExpression; address: string } => {
+    // Map specific company names to their addresses
+    const knownAddresses: Record<string, { coordinates: LatLngExpression; address: string }> = {
+      'MapleTech Solutions': { coordinates: [43.6532, -79.3832] as LatLngExpression, address: '123 King Street West, Toronto, ON M5H 1A1' },
+      'Vancouver Dynamics Inc.': { coordinates: [49.2827, -123.1207] as LatLngExpression, address: '456 Granville Street, Vancouver, BC V6C 1X8' },
+      'Montreal Innovations Ltd.': { coordinates: [45.5017, -73.5673] as LatLngExpression, address: '789 Rue Saint-Jacques, Montreal, QC H2Y 1K9' },
+      'Calgary Energy Systems': { coordinates: [51.0447, -114.0719] as LatLngExpression, address: '321 7th Avenue SW, Calgary, AB T2P 0Y9' }
+    };
+
+    // Check if we have a known address for this company
+    if (knownAddresses[companyName]) {
+      return knownAddresses[companyName];
+    }
+
+    // Mock locations across different Canadian regions
     const mockLocations = [
-      { coordinates: [40.7128, -74.0060] as LatLngExpression, address: '123 Wall St, New York, NY 10005' }, // NYC
-      { coordinates: [41.8781, -87.6298] as LatLngExpression, address: '456 Michigan Ave, Chicago, IL 60601' }, // Chicago
-      { coordinates: [34.0522, -118.2437] as LatLngExpression, address: '789 Wilshire Blvd, Los Angeles, CA 90017' }, // LA
-      { coordinates: [37.7749, -122.4194] as LatLngExpression, address: '321 Market St, San Francisco, CA 94105' }, // SF
-      { coordinates: [42.3601, -71.0589] as LatLngExpression, address: '654 State St, Boston, MA 02109' }, // Boston
-      { coordinates: [47.6062, -122.3321] as LatLngExpression, address: '987 Pike St, Seattle, WA 98101' }, // Seattle
-      { coordinates: [32.7157, -117.1611] as LatLngExpression, address: '147 Harbor Dr, San Diego, CA 92101' }, // San Diego
-      { coordinates: [39.9526, -75.1652] as LatLngExpression, address: '258 Market St, Philadelphia, PA 19103' }, // Philly
-      { coordinates: [30.2672, -97.7431] as LatLngExpression, address: '369 Congress Ave, Austin, TX 78701' }, // Austin
-      { coordinates: [33.4484, -112.0740] as LatLngExpression, address: '741 Central Ave, Phoenix, AZ 85004' }, // Phoenix
+      { coordinates: [43.6532, -79.3832] as LatLngExpression, address: address || '100 Queen St W, Toronto, ON M5H 2N1' }, // Toronto
+      { coordinates: [45.5017, -73.5673] as LatLngExpression, address: address || '1000 Rue de la Gauchetière, Montreal, QC H3B 5H4' }, // Montreal
+      { coordinates: [49.2827, -123.1207] as LatLngExpression, address: address || '200 Burrard St, Vancouver, BC V6C 3L6' }, // Vancouver
+      { coordinates: [51.0447, -114.0719] as LatLngExpression, address: address || '500 Centre St S, Calgary, AB T2G 1A6' }, // Calgary
+      { coordinates: [45.4215, -75.6972] as LatLngExpression, address: address || '150 Elgin St, Ottawa, ON K2P 1L4' }, // Ottawa
+      { coordinates: [53.5461, -113.4938] as LatLngExpression, address: address || '10220 104 Ave NW, Edmonton, AB T5J 0H6' }, // Edmonton
+      { coordinates: [49.8951, -97.1384] as LatLngExpression, address: address || '201 Portage Ave, Winnipeg, MB R3B 3K6' }, // Winnipeg
+      { coordinates: [44.6488, -63.5752] as LatLngExpression, address: address || '1800 Argyle St, Halifax, NS B3J 3N8' }, // Halifax
+      { coordinates: [43.2557, -79.8711] as LatLngExpression, address: address || '1 King St W, Hamilton, ON L8P 1A4' }, // Hamilton
+      { coordinates: [46.8139, -71.2080] as LatLngExpression, address: address || '900 Boulevard René-Lévesque E, Quebec City, QC G1R 2B5' }, // Quebec City
     ];
     
-    // Use modulo to cycle through locations
-    return mockLocations[index % mockLocations.length];
+    // Use hash of company name to consistently assign locations
+    const hash = companyName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return mockLocations[hash % mockLocations.length];
   };
   
   useEffect(() => {
     // Convert call logs to locations with mock coordinates
-    const locations = callLogs.map((log, index) => {
-      const { coordinates, address } = geocodeAddress(log.leadId, index);
+    const locations = callLogs.map((log) => {
+      const address = log.additionalInfo?.address;
+      const { coordinates, address: geocodedAddress } = geocodeAddress(log.leadId, address);
       return {
         callLog: log,
         coordinates,
-        address
+        address: address || geocodedAddress
       };
     });
 
@@ -175,66 +190,70 @@ const CallMap: React.FC<CallMapProps> = ({ callLogs }) => {
       {
         callLog: {
           id: 'mock-no-response-1',
-          leadId: 'TechStart Solutions',
+          leadId: 'Prairie Tech Solutions',
           outcome: 'no-response' as any,
           intel: 'No answer on multiple attempts',
           bestTalkingPoint: '',
           keyTakeaway: 'Try different time slots',
-          createdAt: new Date(2024, 5, 18),
+          createdAt: new Date(2025, 6, 8),
           callDuration: 0
         },
-        coordinates: [41.2524, -95.9980], // Omaha
-        address: '123 Business Park, Omaha, NE 68102'
+        coordinates: [52.1332, -106.6700], // Saskatoon
+        address: '123 Business Park, Saskatoon, SK S7K 0J5'
       },
       {
         callLog: {
           id: 'mock-current-client-1',
-          leadId: 'GlobalCorp Industries',
+          leadId: 'Atlantic Industries Ltd.',
           outcome: 'current-client' as any,
           intel: 'Existing client - quarterly check-in',
           bestTalkingPoint: 'Renewal discussion',
           keyTakeaway: 'Very satisfied with services',
-          createdAt: new Date(2024, 5, 15),
+          createdAt: new Date(2025, 6, 5),
           callDuration: 25
         },
-        coordinates: [35.2271, -80.8431], // Charlotte
-        address: '456 Corporate Blvd, Charlotte, NC 28202'
+        coordinates: [46.2382, -63.1311], // Charlottetown
+        address: '456 Corporate Blvd, Charlottetown, PE C1A 1A1'
       },
       {
         callLog: {
           id: 'mock-no-response-2',
-          leadId: 'Mountain View LLC',
+          leadId: 'Northern Enterprises Inc.',
           outcome: 'no-response' as any,
           intel: 'Gatekeeper screening calls',
           bestTalkingPoint: '',
           keyTakeaway: 'Need better approach to reach decision maker',
-          createdAt: new Date(2024, 5, 17),
+          createdAt: new Date(2025, 6, 7),
           callDuration: 0
         },
-        coordinates: [39.7392, -104.9903], // Denver
-        address: '789 Mountain Dr, Denver, CO 80202'
+        coordinates: [62.4540, -114.3718], // Yellowknife
+        address: '789 Mountain Dr, Yellowknife, NT X1A 2N1'
       }
     ];
 
     setCallLocations([...locations, ...mockAdditionalPins]);
   }, [callLogs]);
   
-  // Calculate regional statistics
+  // Calculate regional statistics for Canadian provinces
   const calculateRegionalStats = () => {
     const regions: Record<string, { total: number; successful: number }> = {
-      'Northeast': { total: 0, successful: 0 },
-      'Midwest': { total: 0, successful: 0 },
-      'West': { total: 0, successful: 0 },
-      'South': { total: 0, successful: 0 }
+      'Western Canada': { total: 0, successful: 0 },
+      'Central Canada': { total: 0, successful: 0 },
+      'Atlantic Canada': { total: 0, successful: 0 },
+      'Northern Canada': { total: 0, successful: 0 }
     };
     
     callLocations.forEach((location) => {
-      const [lat] = location.coordinates as [number, number];
-      let region = 'Northeast';
+      const [lat, lng] = location.coordinates as [number, number];
+      let region = 'Central Canada';
       
-      if (lat < 35) region = 'South';
-      else if (lat < 40) region = 'Midwest';
-      else if (lat > 42) region = 'West';
+      // Western Canada (BC, Alberta, Saskatchewan, Manitoba)
+      if (lng < -95) region = 'Western Canada';
+      // Atlantic Canada
+      else if (lng > -67) region = 'Atlantic Canada';
+      // Northern Canada (territories)
+      else if (lat > 60) region = 'Northern Canada';
+      // Otherwise Central Canada (Ontario, Quebec)
       
       regions[region].total++;
       if (location.callLog.outcome === 'meeting-booked' || location.callLog.outcome === 'follow-up') {
@@ -267,11 +286,11 @@ const CallMap: React.FC<CallMapProps> = ({ callLogs }) => {
   const filteredLocations = selectedRegion === 'all' 
     ? callLocations 
     : callLocations.filter(loc => {
-        const [lat] = loc.coordinates as [number, number];
-        if (selectedRegion === 'Northeast' && lat >= 40 && lat <= 42) return true;
-        if (selectedRegion === 'Midwest' && lat >= 35 && lat < 40) return true;
-        if (selectedRegion === 'West' && lat > 42) return true;
-        if (selectedRegion === 'South' && lat < 35) return true;
+        const [lat, lng] = loc.coordinates as [number, number];
+        if (selectedRegion === 'Western Canada' && lng < -95) return true;
+        if (selectedRegion === 'Central Canada' && lng >= -95 && lng <= -67 && lat <= 60) return true;
+        if (selectedRegion === 'Atlantic Canada' && lng > -67) return true;
+        if (selectedRegion === 'Northern Canada' && lat > 60) return true;
         return false;
       });
   
@@ -289,17 +308,17 @@ const CallMap: React.FC<CallMapProps> = ({ callLogs }) => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
             <option value="all">All Regions</option>
-            <option value="Northeast">Northeast</option>
-            <option value="Midwest">Midwest</option>
-            <option value="West">West</option>
-            <option value="South">South</option>
+            <option value="Western Canada">Western Canada</option>
+            <option value="Central Canada">Central Canada</option>
+            <option value="Atlantic Canada">Atlantic Canada</option>
+            <option value="Northern Canada">Northern Canada</option>
           </select>
         </div>
         
         <div className="h-96 rounded-lg overflow-hidden border border-gray-200">
           <MapContainer
-            center={[39.8283, -98.5795]} // Center of USA
-            zoom={4}
+            center={[56.1304, -106.3468]} // Center of Canada
+            zoom={3}
             className="h-full w-full"
           >
             <TileLayer

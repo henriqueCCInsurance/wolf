@@ -39,10 +39,26 @@ const SearchConfiguration: React.FC<SearchConfigurationProps> = ({ isOpen, onClo
     if (savedConfig) {
       try {
         const parsed = JSON.parse(savedConfig);
-        setConfig(parsed);
-        EnhancedWebSearchService.configure(parsed);
+        // Validate the configuration
+        if (parsed && 
+            typeof parsed.provider === 'string' &&
+            typeof parsed.maxResults === 'number' &&
+            typeof parsed.timeout === 'number') {
+          // Sanitize values
+          const validConfig = {
+            provider: parsed.provider || 'mock',
+            apiKey: typeof parsed.apiKey === 'string' ? parsed.apiKey : '',
+            searchEngineId: typeof parsed.searchEngineId === 'string' ? parsed.searchEngineId : '',
+            maxResults: Math.min(Math.max(1, parsed.maxResults), 100), // Limit between 1-100
+            timeout: Math.min(Math.max(1000, parsed.timeout), 60000) // Limit between 1-60 seconds
+          };
+          setConfig(validConfig);
+          EnhancedWebSearchService.configure(validConfig);
+        }
       } catch (error) {
         console.error('Failed to load search configuration:', error);
+        // Remove corrupt config
+        localStorage.removeItem('wolf-den-search-config');
       }
     }
   }, []);

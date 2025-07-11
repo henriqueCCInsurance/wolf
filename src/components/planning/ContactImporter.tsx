@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, FileText, AlertCircle, CheckCircle, Download, Target, PhoneCall, Lock, Settings, Cloud } from 'lucide-react';
 import Papa from 'papaparse';
@@ -26,6 +27,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
   onContactsImported
 }) => {
   const { setCurrentModule } = useAppStore();
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [mappings, setMappings] = useState<Record<string, string>>({});
@@ -249,8 +251,7 @@ const ContactImporter: React.FC<ContactImporterProps> = ({
       // Process contacts for database
       const contacts = processContacts();
       
-      // TODO: Get userId from authentication context
-      const userId = 'current-user'; // This should come from auth context
+      const userId = user?.id || 'current-user';
       
       // Save contacts to database
       const savedContacts = await NetlifyDatabaseService.contactService.bulkCreate(userId, contacts.map(contact => ({

@@ -11,10 +11,13 @@ import { format } from 'date-fns';
 import { exportCallLogsToCSV, exportPerformanceMetricsToCSV, exportCompleteDataset, generateCallInsights } from '@/utils/exportUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackCallMade, trackMeetingBooked } from '@/services/activityTracking';
+import { useToast } from '@/components/common/Toast';
+import { sanitizeFormData } from '@/utils/sanitization';
 
 const PostGame: React.FC = () => {
   const { prospect, callLogs, addCallLog, battleCards, activeCallDuration, clearCallLogs } = useAppStore();
   const { user } = useAuth();
+  const toast = useToast();
   
   const [formData, setFormData] = useState({
     outcome: '',
@@ -144,30 +147,47 @@ const PostGame: React.FC = () => {
   const handleSubmit = async () => {
     if (!validateForm()) return;
     
+    // Sanitize form data before submission
+    const sanitizedData = sanitizeFormData(formData, {
+      intel: 'multiline',
+      bestTalkingPoint: 'text',
+      keyTakeaway: 'text',
+      newContacts: 'text',
+      referrals: 'text',
+      companyInsights: 'multiline',
+      nextSteps: 'multiline',
+      competitorMentioned: 'text',
+      competitorStrengths: 'multiline',
+      competitorWeaknesses: 'multiline',
+      switchingReasons: 'multiline',
+      decisionFactors: 'multiline',
+      competitiveResponse: 'multiline'
+    });
+    
     const callLog: CallLog = {
       id: Date.now().toString(),
       leadId: prospect?.companyName || 'unknown',
-      outcome: formData.outcome as CallLog['outcome'],
-      intel: formData.intel,
-      bestTalkingPoint: formData.bestTalkingPoint,
-      keyTakeaway: formData.keyTakeaway,
+      outcome: sanitizedData.outcome as CallLog['outcome'],
+      intel: sanitizedData.intel,
+      bestTalkingPoint: sanitizedData.bestTalkingPoint,
+      keyTakeaway: sanitizedData.keyTakeaway,
       createdAt: new Date(),
-      callDuration: formData.callDuration,
+      callDuration: sanitizedData.callDuration,
       additionalInfo: {
-        newContacts: formData.newContacts,
-        referrals: formData.referrals,
-        companyInsights: formData.companyInsights,
-        nextSteps: formData.nextSteps,
-        meetingType: formData.meetingType,
-        followUpDate: formData.followUpDate
+        newContacts: sanitizedData.newContacts,
+        referrals: sanitizedData.referrals,
+        companyInsights: sanitizedData.companyInsights,
+        nextSteps: sanitizedData.nextSteps,
+        meetingType: sanitizedData.meetingType,
+        followUpDate: sanitizedData.followUpDate
       },
-      competitiveEncounter: formData.competitorMentioned ? {
-        competitorMentioned: formData.competitorMentioned,
-        competitorStrengths: formData.competitorStrengths,
-        competitorWeaknesses: formData.competitorWeaknesses,
-        switchingReasons: formData.switchingReasons,
-        decisionFactors: formData.decisionFactors,
-        competitiveResponse: formData.competitiveResponse
+      competitiveEncounter: sanitizedData.competitorMentioned ? {
+        competitorMentioned: sanitizedData.competitorMentioned,
+        competitorStrengths: sanitizedData.competitorStrengths,
+        competitorWeaknesses: sanitizedData.competitorWeaknesses,
+        switchingReasons: sanitizedData.switchingReasons,
+        decisionFactors: sanitizedData.decisionFactors,
+        competitiveResponse: sanitizedData.competitiveResponse
       } : undefined
     };
     
@@ -215,11 +235,18 @@ const PostGame: React.FC = () => {
       });
       setShowDemoData(false);
       
-      // Show success message (could be improved with a toast)
-      alert('Call log saved successfully!');
+      // Show success message with toast
+      toast.success('Call log saved successfully!', 
+        formData.outcome === 'meeting-booked' 
+          ? 'Great job booking that meeting!' 
+          : 'Keep up the excellent work!'
+      );
     } catch (error) {
       console.error('Error saving call log:', error);
-      alert('Call log saved locally, but failed to sync to database. Check console for details.');
+      toast.warning(
+        'Call log saved locally', 
+        'Unable to sync to database. Your data is safe and will sync when connection is restored.'
+      );
     }
   };
 

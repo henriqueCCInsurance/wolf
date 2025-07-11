@@ -87,7 +87,7 @@ const CallTimer: React.FC<CallTimerProps> = ({ persona, onTimeUpdate, onCallEnd,
         intervalRef.current = null;
       }
     };
-  }, [isCallActive, setActiveCallStartTime, setActiveCallDuration]); // Removed onTimeUpdate and onCallEnd to prevent unnecessary re-renders
+  }, [isCallActive, setActiveCallStartTime, setActiveCallDuration, onTimeUpdate, onCallEnd]);
 
   // Note: Timer interval is now managed in the main effect above
 

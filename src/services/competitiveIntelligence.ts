@@ -317,30 +317,75 @@ export class CompetitiveIntelligenceService {
     try {
       const encounters = localStorage.getItem('wolf-den-competitive-encounters');
       if (encounters) {
-        this.encounters = JSON.parse(encounters).map((encounter: any) => ({
-          ...encounter,
-          encounteredAt: new Date(encounter.encounteredAt)
-        }));
+        const parsed = JSON.parse(encounters);
+        // Validate and clean data
+        this.encounters = parsed
+          .filter((encounter: any) => encounter && encounter.id && encounter.competitorId)
+          .map((encounter: any) => ({
+            ...encounter,
+            encounteredAt: new Date(encounter.encounteredAt)
+          }))
+          .filter((encounter: any) => !isNaN(encounter.encounteredAt.getTime()));
+        
+        // Apply retention policy - keep only last 90 days
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        this.encounters = this.encounters.filter(e => e.encounteredAt > ninetyDaysAgo);
       }
 
       const intelligence = localStorage.getItem('wolf-den-competitive-intelligence');
       if (intelligence) {
-        this.intelligenceItems = JSON.parse(intelligence).map((item: any) => ({
-          ...item,
-          capturedAt: new Date(item.capturedAt)
-        }));
+        const parsed = JSON.parse(intelligence);
+        // Validate and clean data
+        this.intelligenceItems = parsed
+          .filter((item: any) => item && item.id && item.competitorId)
+          .map((item: any) => ({
+            ...item,
+            capturedAt: new Date(item.capturedAt)
+          }))
+          .filter((item: any) => !isNaN(item.capturedAt.getTime()));
+        
+        // Keep only last 1000 items
+        if (this.intelligenceItems.length > 1000) {
+          this.intelligenceItems = this.intelligenceItems
+            .sort((a, b) => b.capturedAt.getTime() - a.capturedAt.getTime())
+            .slice(0, 1000);
+        }
       }
     } catch (error) {
       console.error('Error loading competitive intelligence from storage:', error);
+      // Reset to clean state on error
+      this.encounters = [];
+      this.intelligenceItems = [];
     }
   }
 
   private saveToStorage(): void {
     try {
-      localStorage.setItem('wolf-den-competitive-encounters', JSON.stringify(this.encounters));
-      localStorage.setItem('wolf-den-competitive-intelligence', JSON.stringify(this.intelligenceItems));
+      // Apply size limits before saving
+      const limitedEncounters = this.encounters.slice(-500); // Keep last 500
+      const limitedIntelligence = this.intelligenceItems.slice(-1000); // Keep last 1000
+      
+      localStorage.setItem('wolf-den-competitive-encounters', JSON.stringify(limitedEncounters));
+      localStorage.setItem('wolf-den-competitive-intelligence', JSON.stringify(limitedIntelligence));
     } catch (error) {
       console.error('Error saving competitive intelligence to storage:', error);
+      
+      // If quota exceeded, try to clear old data and retry
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        try {
+          // Keep only last 100 of each
+          const criticalEncounters = this.encounters.slice(-100);
+          const criticalIntelligence = this.intelligenceItems.slice(-100);
+          
+          localStorage.setItem('wolf-den-competitive-encounters', JSON.stringify(criticalEncounters));
+          localStorage.setItem('wolf-den-competitive-intelligence', JSON.stringify(criticalIntelligence));
+          
+          console.warn('Storage quota exceeded - saved reduced dataset');
+        } catch (retryError) {
+          console.error('Failed to save even reduced dataset:', retryError);
+        }
+      }
     }
   }
 

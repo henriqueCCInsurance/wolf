@@ -222,6 +222,7 @@ export const contactService = {
   },
 
   async update(id: string, userId: string, data: Partial<DatabaseContact>) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = data;
     await db.update(contacts)
       .set({ ...updateData, updatedAt: new Date() })
@@ -267,6 +268,7 @@ export const userPreferencesService = {
   },
 
   async update(userId: string, data: Partial<UserPreferences>) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = data;
     
     await db.update(userPreferences)

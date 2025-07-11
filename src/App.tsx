@@ -8,6 +8,8 @@ import ShortcutsHelp from '@/components/common/ShortcutsHelp';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import ModuleErrorBoundary from '@/components/common/ModuleErrorBoundary';
+import ToastContainer from '@/components/common/Toast';
 import ThemeProvider from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useAppStore } from '@/store';
@@ -17,7 +19,7 @@ import useKeyboardShortcuts from '@/hooks/useKeyboardShortcuts';
 const Dashboard = lazy(() => import('@/components/modules/Dashboard'));
 const IntegratedCallPlanner = lazy(() => import('@/components/planning/IntegratedCallPlanner'));
 const CallGuide = lazy(() => import('@/components/modules/CallCard'));
-const LiveCallAssistance = lazy(() => import('@/components/callflow/LiveCallAssistance'));
+const LiveCallAssistance = lazy(() => import('@/components/callflow/LiveCallAssistanceRefactored'));
 const EnhancedPostGame = lazy(() => import('@/components/analytics/EnhancedPostGame'));
 const HelpCenter = lazy(() => import('@/components/modules/HelpCenter'));
 const Profile = lazy(() => import('@/components/modules/ProfilePage'));
@@ -51,28 +53,30 @@ function AppContent() {
 
     return (
       <Suspense fallback={ModuleLoader}>
-        {(() => {
-          switch (currentModule) {
-            case 'dashboard':
-              return <Dashboard />;
-            case 'call-planner':
-              return <IntegratedCallPlanner />;
-            case 'battle-card':
-              return <CallGuide />;
-            case 'live-call':
-              return <LiveCallAssistance />;
-            case 'post-game':
-              return <EnhancedPostGame />;
-            case 'help-center':
-              return <HelpCenter />;
-            case 'profile':
-              return <Profile />;
-            case 'resources':
-              return <Resources />;
-            default:
-              return <Dashboard />;
-          }
-        })()}
+        <ModuleErrorBoundary moduleName={currentModule} fallbackModule="dashboard">
+          {(() => {
+            switch (currentModule) {
+              case 'dashboard':
+                return <Dashboard />;
+              case 'call-planner':
+                return <IntegratedCallPlanner />;
+              case 'battle-card':
+                return <CallGuide />;
+              case 'live-call':
+                return <LiveCallAssistance />;
+              case 'post-game':
+                return <EnhancedPostGame />;
+              case 'help-center':
+                return <HelpCenter />;
+              case 'profile':
+                return <Profile />;
+              case 'resources':
+                return <Resources />;
+              default:
+                return <Dashboard />;
+            }
+          })()}
+        </ModuleErrorBoundary>
       </Suspense>
     );
   };
@@ -92,7 +96,7 @@ function AppContent() {
         <div className="min-h-screen bg-gray-50">
           {/* Admin Header */}
           <header className="bg-white shadow-sm border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center h-16">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3">
@@ -135,7 +139,7 @@ function AppContent() {
           </header>
           
           {/* Admin Content */}
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <main className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <Suspense fallback={<LoadingSpinner size="lg" message="Loading admin dashboard..." />}>
               <AdminDashboard />
             </Suspense>
@@ -160,6 +164,7 @@ function App() {
       <Router>
         <ThemeProvider>
           <AuthProvider>
+            <ToastContainer />
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/*" element={<AppContent />} />

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 
-interface TooltipProps {
+export interface TooltipProps {
   children: React.ReactNode;
   content: React.ReactNode;
   placement?: 'top' | 'bottom' | 'left' | 'right';
@@ -169,7 +169,7 @@ const Tooltip: React.FC<TooltipProps> = ({
         window.removeEventListener('scroll', calculatePosition, true);
       };
     }
-  }, [isVisible, content]);
+  }, [isVisible, content, calculatePosition]);
 
   useEffect(() => {
     return () => {
@@ -246,39 +246,3 @@ const Tooltip: React.FC<TooltipProps> = ({
 
 export default Tooltip;
 
-// Tooltip variants for specific use cases
-export const ErrorTooltip: React.FC<Omit<TooltipProps, 'variant'>> = (props) => (
-  <Tooltip variant="error" {...props} />
-);
-
-export const SuccessTooltip: React.FC<Omit<TooltipProps, 'variant'>> = (props) => (
-  <Tooltip variant="success" {...props} />
-);
-
-export const WarningTooltip: React.FC<Omit<TooltipProps, 'variant'>> = (props) => (
-  <Tooltip variant="warning" {...props} />
-);
-
-export const InfoTooltip: React.FC<Omit<TooltipProps, 'variant'>> = (props) => (
-  <Tooltip variant="info" {...props} />
-);
-
-export const InteractiveTooltip: React.FC<Omit<TooltipProps, 'interactive'>> = (props) => (
-  <Tooltip interactive={true} {...props} />
-);
-
-// Hook for programmatic tooltip control
-export const useTooltip = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  
-  const show = () => setIsVisible(true);
-  const hide = () => setIsVisible(false);
-  const toggle = () => setIsVisible(!isVisible);
-  
-  return {
-    isVisible,
-    show,
-    hide,
-    toggle
-  };
-};

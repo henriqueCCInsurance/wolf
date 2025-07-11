@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import { Prospect, ContentItem, CallLog, CallCard, WebSearchResult, CallSequence, Contact, CompetitiveEncounter } from '@/types';
 import { DatabaseService } from '@/services/database';
 import { NetlifyDatabaseService } from '@/services/netlifyDb';
 import { CompetitiveIntelligenceService } from '@/services/competitiveIntelligence';
+import { localStorageService } from '@/services/localStorageService';
 
 interface ProfileData {
   userName?: string;
@@ -41,7 +42,7 @@ interface AppState {
   
   // Call logs
   callLogs: CallLog[];
-  addCallLog: (log: CallLog) => Promise<void>;
+  addCallLog: (log: CallLog, userId?: string) => Promise<void>;
   updateCallLog: (id: string, updates: Partial<CallLog>) => void;
   getCallLogsForContact: (contactId: string) => CallLog[];
   clearCallLogs: () => void;
@@ -135,7 +136,7 @@ export const useAppStore = create<AppState>()(
       setDynamicIntelligence: (results) => set({ dynamicIntelligence: results }),
       
       // Call log actions
-      addCallLog: async (log) => {
+      addCallLog: async (log, userId = 'current-user') => {
         const { callLogs, activeSequenceId, callSequences } = get();
         
         // Process competitive intelligence
@@ -182,7 +183,7 @@ export const useAppStore = create<AppState>()(
               endTime: log.endTime?.toISOString() || null,
               attemptNumber: log.attemptNumber || 1,
               additionalInfo: log.additionalInfo || {},
-              userId: 'current-user' // TODO: Get from authentication context
+              userId: userId
             });
             // Call log saved to Netlify DB successfully
           } catch (netlifyError) {
@@ -322,7 +323,18 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'wolf-den-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: {
+        getItem: async () => {
+          const data = localStorageService.loadState();
+          return data ? { state: data } : null;
+        },
+        setItem: async (_, value) => {
+          localStorageService.saveState(value.state);
+        },
+        removeItem: async () => {
+          localStorageService.clearAll();
+        }
+      },
       partialize: (state) => ({
         callLogs: state.callLogs,
         callCards: state.callCards,

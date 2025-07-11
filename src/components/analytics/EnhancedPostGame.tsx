@@ -115,48 +115,74 @@ const EnhancedPostGame: React.FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Mock data for demo
+  // Mock data for demo - Canadian companies
   const mockCallLogs: CallLog[] = [
     {
       id: '1',
-      leadId: 'lead1',
+      leadId: 'MapleTech Solutions',
       outcome: 'meeting-booked',
       intel: 'Looking to reduce costs by 20%, current provider contract expires in Q2',
       bestTalkingPoint: 'Cost optimization without sacrificing coverage',
       keyTakeaway: 'Very interested in our cost-reduction approach',
-      createdAt: new Date('2024-06-20'),
+      createdAt: new Date('2025-07-11T14:30:00'),
+      startTime: new Date('2025-07-11T14:30:00'),
       callDuration: 18,
       additionalInfo: {
         newContacts: 'CFO Sarah Williams',
         referrals: 'Recommended by current client TechCorp',
         companyInsights: '200 employees, growing 15% annually',
         nextSteps: 'Discovery meeting scheduled for next Tuesday',
-        meetingType: 'discovery'
+        meetingType: 'discovery',
+        address: '123 King Street West, Toronto, ON M5H 1A1'
       }
     },
     {
       id: '2',
-      leadId: 'lead2',
+      leadId: 'Vancouver Dynamics Inc.',
       outcome: 'follow-up',
       intel: 'Decision committee meets monthly, next meeting is end of month',
       bestTalkingPoint: 'Industry-specific benefits package customization',
       keyTakeaway: 'Timing is crucial - need proposal by month end',
-      createdAt: new Date('2024-06-19'),
+      createdAt: new Date('2025-07-11T10:15:00'),
+      startTime: new Date('2025-07-11T10:15:00'),
       callDuration: 12,
       additionalInfo: {
         nextSteps: 'Send proposal draft by Friday',
-        followUpDate: '2024-06-25'
+        followUpDate: '2025-07-25',
+        address: '456 Granville Street, Vancouver, BC V6C 1X8'
       }
     },
     {
       id: '3',
-      leadId: 'lead3',
+      leadId: 'Montreal Innovations Ltd.',
       outcome: 'nurture',
       intel: 'Happy with current provider but open to future conversations',
       bestTalkingPoint: 'Thought leadership on benefits trends',
       keyTakeaway: 'Keep in nurture campaign, follow up in 6 months',
-      createdAt: new Date('2024-06-18'),
-      callDuration: 8
+      createdAt: new Date('2025-07-10T16:45:00'),
+      startTime: new Date('2025-07-10T16:45:00'),
+      callDuration: 8,
+      additionalInfo: {
+        address: '789 Rue Saint-Jacques, Montreal, QC H2Y 1K9'
+      }
+    },
+    {
+      id: '4',
+      leadId: 'Calgary Energy Systems',
+      outcome: 'meeting-booked',
+      intel: 'Expanding from 150 to 300 employees, needs comprehensive benefits overhaul',
+      bestTalkingPoint: 'Scalable benefits solutions for growing companies',
+      keyTakeaway: 'CEO wants presentation to board next month',
+      createdAt: new Date('2025-07-10T11:20:00'),
+      startTime: new Date('2025-07-10T11:20:00'),
+      callDuration: 22,
+      additionalInfo: {
+        newContacts: 'CEO Michael Thompson, HR Director Lisa Chen',
+        companyInsights: 'Oil & gas company, strong growth trajectory',
+        nextSteps: 'Prepare board presentation for August 5th',
+        meetingType: 'proposal',
+        address: '321 7th Avenue SW, Calgary, AB T2P 0Y9'
+      }
     }
   ];
 
@@ -612,7 +638,9 @@ const EnhancedPostGame: React.FC = () => {
               {/* Call History List */}
               <div className="space-y-3">
                 {allCallLogs.length > 0 ? (
-                  allCallLogs.map((log) => (
+                  allCallLogs
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((log) => (
                     <motion.div
                       key={log.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -654,7 +682,7 @@ const EnhancedPostGame: React.FC = () => {
                               <Clock className="w-4 h-4" />
                               <span>{log.callDuration || 0} min</span>
                               <span className="text-gray-300 dark:text-gray-600">•</span>
-                              <span>{format(log.createdAt, 'MMM d, yyyy')}</span>
+                              <span>{format(log.startTime || log.createdAt, 'MMM d, yyyy h:mm a')}</span>
                             </div>
                           </div>
 

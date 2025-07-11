@@ -4,7 +4,7 @@ import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
-import ContentLibrary from '@/components/common/ContentLibrary';
+import ScriptLibrary from '@/components/callguide/ScriptLibrary';
 import EnhancedLiveIntelligence from '@/components/intelligence/EnhancedLiveIntelligence';
 import CollapsibleSection from '@/components/common/CollapsibleSection';
 import { useAppStore } from '@/store';
@@ -13,6 +13,7 @@ import { industries } from '@/data/industries';
 import { PersonaType } from '@/types';
 import { EnhancedWebSearchService } from '@/services/enhancedWebSearch';
 import { CompanyIntelligenceService } from '@/services/companyIntelligence';
+import { sanitizeName, sanitizeFormData } from '@/utils/sanitization';
 
 const HuntPlanner: React.FC = () => {
   const { 
@@ -61,11 +62,19 @@ const HuntPlanner: React.FC = () => {
 
   const handleSubmit = async () => {
     if (validateForm()) {
+      // Sanitize form data before submission
+      const sanitizedData = sanitizeFormData(formData, {
+        companyName: 'name',
+        contactName: 'name',
+        industry: 'text',
+        persona: 'text'
+      });
+      
       const newProspect = {
-        companyName: formData.companyName,
-        contactName: formData.contactName,
-        industry: formData.industry,
-        persona: formData.persona
+        companyName: sanitizedData.companyName,
+        contactName: sanitizedData.contactName,
+        industry: sanitizedData.industry,
+        persona: sanitizedData.persona
       };
       
       setProspect(newProspect);
@@ -369,10 +378,10 @@ const HuntPlanner: React.FC = () => {
       {/* Content Library */}
       {prospect && (
         <Card 
-          title="Step 5: Strategic Content Selection"
+          title="Step 5: Script Library"
           subtitle="Choose your conversation weapons for this specific engagement"
         >
-          <ContentLibrary />
+          <ScriptLibrary />
         </Card>
       )}
 

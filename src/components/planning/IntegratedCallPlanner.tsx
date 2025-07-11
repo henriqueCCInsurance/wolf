@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { unstable_batchedUpdates } from 'react-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -41,6 +42,7 @@ import { DealScoringService } from '@/services/dealScoring';
 type PlanningMode = 'single-prospect' | 'imported-list' | 'crm-sync';
 
 const IntegratedCallPlanner: React.FC = () => {
+  const { user } = useAuth();
   const { 
     prospect, 
     setProspect, 
@@ -101,9 +103,6 @@ const IntegratedCallPlanner: React.FC = () => {
         const sequence = callSequences.find(seq => seq.id === activeSequenceId);
         if (sequence) {
           try {
-            // TODO: Get userId from authentication context
-            // const userId = 'current-user';
-            
             // Load contacts from database if they have IDs
             if (sequence.contactIds && sequence.contactIds.length > 0) {
               const dbContacts = await NetlifyDatabaseService.contactService.getByIds(sequence.contactIds);
@@ -431,8 +430,7 @@ const IntegratedCallPlanner: React.FC = () => {
         throw new Error('No valid contacts found after filtering');
       }
       
-      // TODO: Get userId from authentication context
-      const userId = 'current-user';
+      const userId = user?.id || 'current-user';
       
       // If we don't have an active sequence, create one
       if (!currentSequence) {
@@ -752,7 +750,7 @@ const IntegratedCallPlanner: React.FC = () => {
       id: Date.now().toString(),
       name: `${mode} Sequence - ${new Date().toLocaleDateString()}`,
       contacts: selectedContactList.slice(0, sprintSize),
-      createdBy: 'current-user',
+      createdBy: user?.id || 'current-user',
       createdAt: new Date(),
       status: 'planned',
       sprintSize,

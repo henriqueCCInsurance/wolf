@@ -77,6 +77,7 @@ export interface CallLog {
     nextSteps?: string;
     meetingType?: string;
     followUpDate?: string;
+    address?: string;
   };
   // Competitive intelligence fields
   competitiveEncounter?: {

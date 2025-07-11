@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
-import { CallLog, BattleCard } from '@/types';
+import { CallLog, CallCard } from '@/types';
 import { 
   exportCallLogsToCSV, 
   exportBattleCardsToCSV,
@@ -177,7 +177,7 @@ const addPerformanceSheet = (wb: XLSX.WorkBook, callLogs: CallLog[]) => {
 };
 
 // Add Battle Cards Sheet
-const addBattleCardsSheet = (wb: XLSX.WorkBook, battleCards: BattleCard[]) => {
+const addBattleCardsSheet = (wb: XLSX.WorkBook, battleCards: CallCard[]) => {
   const data = battleCards.map(card => ({
     'Generated Date': format(new Date(card.generatedAt), 'yyyy-MM-dd HH:mm'),
     'Company': card.lead?.companyName || '',
@@ -216,7 +216,7 @@ const addBattleCardsSheet = (wb: XLSX.WorkBook, battleCards: BattleCard[]) => {
     { wch: 40 }
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, "Battle Cards");
+  XLSX.utils.book_append_sheet(wb, ws, "Call Cards");
 };
 
 // Add Analytics Sheets
@@ -331,7 +331,7 @@ export const exportToPDF = async (
         pdf.addPage();
         yPosition = 40;
         addPDFHeader(pdf);
-        yPosition = addAnalyticsPDF(pdf, data, yPosition);
+        addAnalyticsPDF(pdf, data, yPosition);
       }
       
       addPageNumbers(pdf);
@@ -425,7 +425,7 @@ const addCallLogsPDF = (pdf: jsPDF, callLogs: CallLog[], startY: number): number
   return y + 10;
 };
 
-const addBattleCardsPDF = (pdf: jsPDF, battleCards: BattleCard[], startY: number): number => {
+const addBattleCardsPDF = (pdf: jsPDF, battleCards: CallCard[], startY: number): number => {
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.text('Battle Cards Generated', 15, startY);
@@ -674,7 +674,7 @@ const generateInsights = (data: any): string[] => {
   }
   
   if (battleCards.length > 0) {
-    const avgContentItems = battleCards.reduce((sum: number, card: BattleCard) => 
+    const avgContentItems = battleCards.reduce((sum: number, card: CallCard) => 
       sum + card.selectedContent.length, 0
     ) / battleCards.length;
     

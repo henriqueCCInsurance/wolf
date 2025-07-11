@@ -135,7 +135,7 @@ const CompetitiveIntelligence: React.FC<CompetitiveIntelligenceProps> = ({
       </Card>
 
       {/* Quick Battle Cards */}
-      <Card title="Quick Battle Cards" subtitle="Ready-to-use competitive positioning">
+      <Card title="Quick Call Cards" subtitle="Ready-to-use competitive positioning">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredCompetitors.slice(0, 4).map(competitor => (
             <div key={competitor.id} className="border border-gray-200 rounded-lg p-4">
@@ -150,7 +150,7 @@ const CompetitiveIntelligence: React.FC<CompetitiveIntelligenceProps> = ({
                   }}
                 >
                   <Target className="w-3 h-3 mr-1" />
-                  Battle Card
+                  Call Card
                 </Button>
               </div>
               
@@ -317,7 +317,7 @@ const CompetitiveIntelligence: React.FC<CompetitiveIntelligenceProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-2xl font-bold text-gray-900">
-              {battleCard.competitor.name} Battle Card
+              {battleCard.competitor.name} Call Card
             </h3>
             <p className="text-gray-600">Competitive positioning and responses</p>
           </div>
@@ -484,7 +484,7 @@ const CompetitiveIntelligence: React.FC<CompetitiveIntelligenceProps> = ({
                     onClick={() => setView('battle-card')}
                   >
                     <Shield className="w-4 h-4 mr-1" />
-                    Battle Card
+                    Call Card
                   </Button>
                 </>
               )}

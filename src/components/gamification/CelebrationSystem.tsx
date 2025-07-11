@@ -96,6 +96,9 @@ const CelebrationSystem: React.FC<CelebrationSystemProps> = ({
   useEffect(() => {
     if (!isActive || !mountRef.current) return;
 
+    // Capture the mount element to prevent stale closure
+    const mountElement = mountRef.current;
+
     // Show confetti
     setShowConfetti(true);
     
@@ -253,12 +256,12 @@ const CelebrationSystem: React.FC<CelebrationSystemProps> = ({
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
       }
-      if (rendererRef.current && mountRef.current) {
-        mountRef.current.removeChild(rendererRef.current.domElement);
+      if (rendererRef.current && mountElement) {
+        mountElement.removeChild(rendererRef.current.domElement);
         rendererRef.current.dispose();
       }
     };
-  }, [isActive, celebrationType, config, onComplete]);
+  }, [isActive, celebrationType, config, onComplete, user]);
 
   if (!isActive) return null;
 
